@@ -1,6 +1,6 @@
 ---
 # GxP.MD v2.1.0 — Annotation-First Compliance for AI Coding Agents
-# Copyright 2026 PharmaLedger Association. All rights reserved.
+# Copyright 2026 James Gannon. Licensed under Apache 2.0.
 gxpmd_version: "2.1.0"
 
 project:
