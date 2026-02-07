@@ -1,0 +1,206 @@
+---
+import Base from '../layouts/Base.astro';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: 'GxP.MD Regulatory Profiles',
+  description: 'Pre-built compliance configurations for pharmaceutical, medical device, clinical trial, and laboratory regulatory frameworks.',
+  author: { '@type': 'Organization', name: 'PharmaLedger Association' },
+  datePublished: '2026-02-07',
+};
+---
+
+<Base
+  title="Regulatory Profiles — GxP.MD"
+  description="Pre-built compliance configurations for pharmaceutical, medical device, clinical trial, and laboratory regulatory frameworks. Compare what each GxP.MD profile requires."
+  type="article"
+  keywords="GxP profiles, FDA 21 CFR Part 11 AI, EU Annex 11 compliance, IEC 62304, ISO 13485, ICH E6 R2, GLP"
+  jsonLd={jsonLd}
+>
+  <article class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <h1 class="text-4xl font-bold text-slate-900 mb-4">Regulatory Profiles</h1>
+    <p class="text-lg text-slate-600 mb-12 max-w-2xl">
+      GxP.MD ships with four built-in profiles. Each configures risk thresholds, required verification tiers,
+      signing requirements, and quality gate checks for a specific regulatory domain.
+    </p>
+
+    <!-- Comparison Table -->
+    <section class="mb-16">
+      <h2 class="text-2xl font-bold text-slate-900 mb-6">Profile Comparison</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
+          <thead>
+            <tr>
+              <th class="bg-slate-50 border border-slate-200 px-4 py-3 text-left font-semibold text-slate-700">Requirement</th>
+              <th class="bg-slate-50 border border-slate-200 px-4 py-3 text-center font-semibold text-slate-700">Pharma</th>
+              <th class="bg-slate-50 border border-slate-200 px-4 py-3 text-center font-semibold text-slate-700">Medical Device</th>
+              <th class="bg-slate-50 border border-slate-200 px-4 py-3 text-center font-semibold text-slate-700">Clinical Trial</th>
+              <th class="bg-slate-50 border border-slate-200 px-4 py-3 text-center font-semibold text-slate-700">Laboratory</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2 font-medium text-slate-700">HIGH coverage threshold</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">95%</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">95%</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">95%</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">90%</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2 font-medium text-slate-700">MEDIUM coverage threshold</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">80%</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">80%</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">85%</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">75%</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2 font-medium text-slate-700">MPA signing (HIGH)</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">Required</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">Required</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">Required</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">Recommended</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2 font-medium text-slate-700">IQ required</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">HIGH + MEDIUM</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">All levels</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">HIGH only</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">HIGH only</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2 font-medium text-slate-700">Audit trail</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">Required</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">Required</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">Required</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">Required</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2 font-medium text-slate-700">GDPR controls</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">-</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">-</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">Required</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">-</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2 font-medium text-slate-700">Design history file</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">-</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">Required</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">-</td>
+              <td class="border border-slate-200 px-4 py-2 text-center">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Profile Details -->
+    <section class="space-y-12">
+      <!-- Pharma Standard -->
+      <div id="pharma-standard" class="scroll-mt-20">
+        <h2 class="text-2xl font-bold text-slate-900 mb-2">Pharmaceutical Standard</h2>
+        <code class="text-sm text-gxp-700 bg-gxp-50 px-2 py-0.5 rounded">pharma-standard</code>
+        <p class="text-slate-600 mt-4 mb-6">
+          The most comprehensive profile. Covers pharmaceutical manufacturing, distribution, and quality management
+          systems. Designed for GAMP Category 5 (custom applications).
+        </p>
+        <h3 class="font-semibold text-slate-800 mb-3">Standards Covered</h3>
+        <ul class="space-y-2 text-sm text-slate-600 mb-6">
+          <li><strong>21 CFR Part 11</strong> — Electronic Records and Electronic Signatures (FDA). Mandatory sections: 11.10 (controls), 11.30 (open systems), 11.50 (signatures), 11.70 (linked signatures).</li>
+          <li><strong>EU Annex 11</strong> — Computerised Systems (EMA). Focus on: risk management (§1), validation (§4), data integrity (§7), audit trail (§9).</li>
+          <li><strong>ICH Q7</strong> — Good Manufacturing Practice for Active Pharmaceutical Ingredients.</li>
+          <li><strong>ICH Q9</strong> — Quality Risk Management. Provides the risk assessment methodology.</li>
+          <li><strong>ICH Q10</strong> — Pharmaceutical Quality System. Knowledge management and continual improvement.</li>
+          <li><strong>GAMP 5</strong> — A Risk-Based Approach to Compliant GxP Computerized Systems. Software lifecycle framework.</li>
+        </ul>
+        <h3 class="font-semibold text-slate-800 mb-3">Key Requirements</h3>
+        <ul class="space-y-1 text-sm text-slate-600">
+          <li>Electronic signatures with non-repudiation (ES256 JWS)</li>
+          <li>Complete audit trails with tamper-evident logging</li>
+          <li>Periodic review of system access and validation status</li>
+          <li>Change control with impact assessment for all modifications</li>
+        </ul>
+      </div>
+
+      <!-- Medical Device -->
+      <div id="medical-device" class="scroll-mt-20">
+        <h2 class="text-2xl font-bold text-slate-900 mb-2">Medical Device</h2>
+        <code class="text-sm text-gxp-700 bg-gxp-50 px-2 py-0.5 rounded">medical-device</code>
+        <p class="text-slate-600 mt-4 mb-6">
+          For medical device software lifecycle management. Maps software safety classification (Class A/B/C)
+          to GxP.MD risk levels (LOW/MEDIUM/HIGH).
+        </p>
+        <h3 class="font-semibold text-slate-800 mb-3">Standards Covered</h3>
+        <ul class="space-y-2 text-sm text-slate-600 mb-6">
+          <li><strong>IEC 62304</strong> — Medical Device Software Lifecycle Processes. Covers software development planning (§5.1), architecture design (§5.3), unit implementation (§5.5), integration testing (§5.6), system testing (§5.7).</li>
+          <li><strong>ISO 13485</strong> — Medical Devices Quality Management Systems. Design and development planning (§7.3), design review (§7.3.5), design verification (§7.3.6).</li>
+          <li><strong>FDA 21 CFR 820</strong> — Quality System Regulation. Design controls (§820.30), design history file (§820.30(j)).</li>
+        </ul>
+        <h3 class="font-semibold text-slate-800 mb-3">Key Requirements</h3>
+        <ul class="space-y-1 text-sm text-slate-600">
+          <li>Software safety classification determines verification rigor</li>
+          <li>Design history file (DHF) maintained as .gxp/ artifacts</li>
+          <li>IQ required at all risk levels (infrastructure is always critical)</li>
+          <li>SOUP (Software of Unknown Provenance) documentation for dependencies</li>
+        </ul>
+      </div>
+
+      <!-- Clinical Trial -->
+      <div id="clinical-trial" class="scroll-mt-20">
+        <h2 class="text-2xl font-bold text-slate-900 mb-2">Clinical Trial</h2>
+        <code class="text-sm text-gxp-700 bg-gxp-50 px-2 py-0.5 rounded">clinical-trial</code>
+        <p class="text-slate-600 mt-4 mb-6">
+          For clinical trial data systems, electronic Case Report Forms (eCRF), Clinical Trial Management Systems (CTMS),
+          and randomization systems. Includes GDPR data protection requirements.
+        </p>
+        <h3 class="font-semibold text-slate-800 mb-3">Standards Covered</h3>
+        <ul class="space-y-2 text-sm text-slate-600 mb-6">
+          <li><strong>ICH E6(R2)</strong> — Good Clinical Practice. Investigator responsibilities (§4), sponsor responsibilities (§5), essential documents (§8).</li>
+          <li><strong>21 CFR Part 11</strong> — Electronic records for clinical trial data.</li>
+          <li><strong>GDPR</strong> — General Data Protection Regulation. Data minimization (Art. 5(1)(c)), right to erasure compatibility (Art. 17), lawful basis for processing (Art. 6).</li>
+        </ul>
+        <h3 class="font-semibold text-slate-800 mb-3">Key Requirements</h3>
+        <ul class="space-y-1 text-sm text-slate-600">
+          <li>Patient data must never appear in test fixtures or evidence artifacts</li>
+          <li>GDPR-compliant data handling with anonymization support</li>
+          <li>Higher MEDIUM coverage threshold (85%) due to patient safety implications</li>
+          <li>Consent tracking and data subject rights support</li>
+        </ul>
+      </div>
+
+      <!-- Laboratory -->
+      <div id="laboratory" class="scroll-mt-20">
+        <h2 class="text-2xl font-bold text-slate-900 mb-2">Laboratory</h2>
+        <code class="text-sm text-gxp-700 bg-gxp-50 px-2 py-0.5 rounded">laboratory</code>
+        <p class="text-slate-600 mt-4 mb-6">
+          For Good Laboratory Practice (GLP) systems, Laboratory Information Management Systems (LIMS),
+          and testing/calibration laboratory software. Lighter weight than pharmaceutical standard.
+        </p>
+        <h3 class="font-semibold text-slate-800 mb-3">Standards Covered</h3>
+        <ul class="space-y-2 text-sm text-slate-600 mb-6">
+          <li><strong>21 CFR Part 58</strong> — Good Laboratory Practice for Nonclinical Studies. Protocol and conduct of studies (§58.120), reporting (§58.185), record retention (§58.195).</li>
+          <li><strong>ISO 17025</strong> — General Requirements for Testing and Calibration Laboratories. Management requirements (§4), technical requirements (§5).</li>
+        </ul>
+        <h3 class="font-semibold text-slate-800 mb-3">Key Requirements</h3>
+        <ul class="space-y-1 text-sm text-slate-600">
+          <li>Raw data integrity is the primary concern</li>
+          <li>Lower coverage thresholds than pharmaceutical standard</li>
+          <li>MPA signing recommended but not required for HIGH risk</li>
+          <li>Focus on method validation and equipment qualification</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- External References -->
+    <section class="mt-16 rounded-lg bg-slate-50 border border-slate-200 p-8">
+      <h2 class="text-xl font-bold text-slate-800 mb-4">Regulatory References</h2>
+      <ul class="space-y-2 text-sm text-slate-600">
+        <li><a href="https://www.fda.gov/regulatory-information/search-fda-guidance-documents/part-11-electronic-records-electronic-signatures-scope-and-application" class="text-gxp-700 hover:underline" target="_blank" rel="noopener noreferrer">FDA — 21 CFR Part 11 Guidance</a></li>
+        <li><a href="https://www.ema.europa.eu/en/annex-11-computerised-systems" class="text-gxp-700 hover:underline" target="_blank" rel="noopener noreferrer">EMA — EU Annex 11</a></li>
+        <li><a href="https://www.ich.org/page/quality-guidelines" class="text-gxp-700 hover:underline" target="_blank" rel="noopener noreferrer">ICH — Quality Guidelines (Q7, Q9, Q10)</a></li>
+        <li><a href="https://www.iso.org/standard/56115.html" class="text-gxp-700 hover:underline" target="_blank" rel="noopener noreferrer">ISO 13485:2016 — Medical Devices QMS</a></li>
+        <li><a href="https://www.iso.org/standard/76153.html" class="text-gxp-700 hover:underline" target="_blank" rel="noopener noreferrer">ISO 17025:2017 — Testing and Calibration Laboratories</a></li>
+      </ul>
+    </section>
+  </article>
+</Base>

@@ -1,0 +1,236 @@
+# GxP.MD Profile: Medical Device
+# Profile for medical device software development
+# Covers IEC 62304, ISO 13485, and FDA 21 CFR 820
+
+# Profile metadata
+name: "Medical Device"
+description: "Regulatory profile for medical device software development covering IEC 62304, ISO 13485, and FDA 21 CFR 820 QSR"
+version: "1.0.0"
+applicable_industries:
+  - medical_device_manufacturing
+  - software_as_medical_device
+  - diagnostic_devices
+  - therapeutic_devices
+
+# Standards covered
+standards:
+  - id: "iec-62304"
+    name: "IEC 62304 - Medical Device Software - Software Life Cycle Processes"
+    mandatory_sections:
+      - "§4.3 - Software safety classification"
+      - "§5.1 - Software development planning"
+      - "§5.2 - Software requirements analysis"
+      - "§5.3 - Software architectural design"
+      - "§5.4 - Software detailed design"
+      - "§5.5 - Software unit implementation and verification"
+      - "§5.6 - Software integration and integration testing"
+      - "§5.7 - Software system testing"
+      - "§5.8 - Software release"
+      - "§6 - Software maintenance process"
+      - "§7 - Software risk management process"
+      - "§8 - Software configuration management process"
+      - "§9 - Software problem resolution process"
+    references:
+      - "IEC 62304:2006+AMD1:2015"
+      - "FDA Guidance: Content of Premarket Submissions for Software Contained in Medical Devices"
+
+  - id: "iso-13485"
+    name: "ISO 13485 - Medical Devices - Quality Management Systems"
+    mandatory_sections:
+      - "§4.2 - Documentation requirements"
+      - "§7.1 - Planning of product realization"
+      - "§7.3 - Design and development"
+      - "§7.3.2 - Design and development inputs"
+      - "§7.3.3 - Design and development outputs"
+      - "§7.3.4 - Design and development review"
+      - "§7.3.5 - Design and development verification"
+      - "§7.3.6 - Design and development validation"
+      - "§7.3.7 - Control of design and development changes"
+      - "§7.5.6 - Validation of processes for production and service provision"
+      - "§8.2.1 - Feedback"
+      - "§8.2.4 - Monitoring and measurement of product"
+    references:
+      - "ISO 13485:2016"
+
+  - id: "fda-21-cfr-820"
+    name: "FDA 21 CFR Part 820 - Quality System Regulation"
+    mandatory_sections:
+      - "§820.30 - Design controls"
+      - "§820.30(a) - Design and development planning"
+      - "§820.30(b) - Design input"
+      - "§820.30(c) - Design output"
+      - "§820.30(d) - Design review"
+      - "§820.30(e) - Design verification"
+      - "§820.30(f) - Design validation"
+      - "§820.30(g) - Design transfer"
+      - "§820.30(h) - Design changes"
+      - "§820.30(i) - Design history file"
+      - "§820.70 - Production and process controls"
+      - "§820.75 - Process validation"
+      - "§820.100 - Corrective and preventive action"
+      - "§820.181 - Device master record"
+      - "§820.184 - Device history record"
+    references:
+      - "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?CFRPart=820"
+
+  - id: "fda-21-cfr-11"
+    name: "21 CFR Part 11 - Electronic Records and Electronic Signatures"
+    mandatory_sections:
+      - "§11.10 - Controls for closed systems"
+      - "§11.10(e) - Audit trails"
+      - "§11.50 - Signature manifestations"
+      - "§11.70 - Signature/record linking"
+    references:
+      - "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?CFRPart=11"
+
+# Software safety classification mapping to risk levels
+# Per IEC 62304 §4.3
+safety_class_mapping:
+  CLASS_A:
+    description: "No injury or damage to health is possible"
+    maps_to_risk: LOW
+    verification_requirements: "Basic unit testing"
+
+  CLASS_B:
+    description: "Non-serious injury is possible"
+    maps_to_risk: MEDIUM
+    verification_requirements: "Unit + integration + system testing"
+
+  CLASS_C:
+    description: "Death or serious injury is possible"
+    maps_to_risk: HIGH
+    verification_requirements: "Full verification and validation per §5.5-5.7"
+
+# Risk level overrides
+risk_overrides:
+  HIGH:  # IEC 62304 Class C
+    coverage_threshold: 95
+    required_tiers: [IQ, OQ, PQ]
+    signing_required: true
+    review_required: true
+    mpa_required: true
+    additional_requirements:
+      - "Full Software of Unknown Provenance (SOUP) assessment per §5.1.4"
+      - "Hazard analysis per §7.1"
+      - "Formal design review per §5.2.6"
+      - "Complete Design History File per 21 CFR 820.30(i)"
+      - "Risk management file per ISO 14971"
+
+  MEDIUM:  # IEC 62304 Class B
+    coverage_threshold: 85
+    required_tiers: [OQ, PQ]
+    signing_required: true
+    review_required: true
+    mpa_required: false
+    additional_requirements:
+      - "SOUP assessment per §5.1.4"
+      - "Design verification per §5.5, 5.6"
+      - "Design validation per §5.7"
+      - "Design History File per 21 CFR 820.30(i)"
+
+  LOW:  # IEC 62304 Class A
+    coverage_threshold: 70
+    required_tiers: [OQ]
+    signing_required: false
+    review_required: false
+    mpa_required: false
+    additional_requirements:
+      - "Basic software unit verification per §5.5"
+
+# Additional gate checks specific to this profile
+additional_gates:
+  pre_commit:
+    - id: "soup-inventory"
+      description: "Update SOUP (Software of Unknown Provenance) inventory"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp soup --check {changed_files}"
+
+    - id: "hazard-analysis"
+      description: "Check if changes affect hazard analysis per IEC 62304 §7"
+      applies_to: [HIGH]
+      check_command: "gxp hazard-check {changed_files}"
+
+  pre_merge:
+    - id: "design-output"
+      description: "Verify design outputs are documented per §5.2.5"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "test -f .gxp/design/outputs.md"
+
+    - id: "software-units"
+      description: "Verify software units are defined and verified per §5.5"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp units --verify"
+
+    - id: "integration-tests"
+      description: "Verify software integration testing per §5.6"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "npm test -- --integration"
+
+  pre_release:
+    - id: "design-history-file"
+      description: "Generate Design History File per 21 CFR 820.30(i)"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp dhf --generate"
+
+    - id: "system-testing"
+      description: "Verify software system testing per §5.7"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "npm test -- --system"
+
+    - id: "release-checklist"
+      description: "Complete software release checklist per §5.8"
+      applies_to: [HIGH, MEDIUM, LOW]
+      check_command: "gxp release --checklist"
+
+# ALCOA+ enforcement settings
+alcoa_overrides:
+  attributable:
+    enforce: strict
+    method: "electronic_signature"
+
+  legible:
+    enforce: strict
+    method: "human_readable_export"
+
+  contemporaneous:
+    enforce: strict
+    method: "timestamp_on_commit"
+
+  original:
+    enforce: strict
+    method: "immutable_records"
+
+  accurate:
+    enforce: strict
+    method: "automated_validation"
+
+  complete:
+    enforce: moderate
+    method: "context_capture"
+
+  consistent:
+    enforce: strict
+    method: "timestamp_synchronization"
+
+  enduring:
+    enforce: strict
+    method: "long_term_retention"  # Per device lifetime + retention period
+
+  available:
+    enforce: strict
+    method: "accessible_archives"
+
+# Profile-specific configuration
+configuration:
+  lifecycle_model: "v_model"  # Per IEC 62304
+  design_controls_required: true  # Per 21 CFR 820.30
+  design_history_file_required: true
+  risk_management_standard: "ISO 14971"
+  cybersecurity_required: true  # Per FDA premarket guidance
+  usability_engineering_required: true  # Per IEC 62366
+
+  # Software maintenance process per §6
+  maintenance:
+    problem_tracking_required: true
+    impact_analysis_required: true
+    regression_testing_required: true

@@ -1,0 +1,76 @@
+---
+const currentPath = Astro.url.pathname;
+
+const links = [
+  { href: '/', label: 'Home' },
+  { href: '/spec', label: 'Specification' },
+  { href: '/getting-started', label: 'Getting Started' },
+  { href: '/templates', label: 'Templates' },
+  { href: '/profiles', label: 'Profiles' },
+];
+---
+
+<nav class="border-b border-slate-200 bg-white/95 backdrop-blur-sm sticky top-0 z-50">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      <a href="/" class="flex items-center gap-2 text-slate-900 hover:text-gxp-700 transition-colors">
+        <span class="font-mono font-bold text-xl tracking-tight">GxP<span class="text-gxp-600">.MD</span></span>
+      </a>
+      <div class="hidden md:flex items-center gap-1">
+        {links.map(link => (
+          <a
+            href={link.href}
+            class:list={[
+              'px-3 py-2 text-sm font-medium rounded-md transition-colors',
+              currentPath === link.href
+                ? 'text-gxp-700 bg-gxp-50'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50',
+            ]}
+          >
+            {link.label}
+          </a>
+        ))}
+        <a
+          href="https://github.com/PL-James/gxp-md"
+          class="ml-2 px-3 py-2 text-sm text-slate-500 hover:text-slate-700 transition-colors"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          GitHub
+        </a>
+      </div>
+      <!-- Mobile menu button -->
+      <button
+        id="mobile-menu-btn"
+        class="md:hidden p-2 text-slate-600 hover:text-slate-900"
+        aria-label="Toggle menu"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="hidden md:hidden pb-4">
+      {links.map(link => (
+        <a
+          href={link.href}
+          class:list={[
+            'block px-3 py-2 text-sm font-medium rounded-md transition-colors',
+            currentPath === link.href
+              ? 'text-gxp-700 bg-gxp-50'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50',
+          ]}
+        >
+          {link.label}
+        </a>
+      ))}
+    </div>
+  </div>
+</nav>
+
+<script>
+  const btn = document.getElementById('mobile-menu-btn');
+  const menu = document.getElementById('mobile-menu');
+  btn?.addEventListener('click', () => menu?.classList.toggle('hidden'));
+</script>

@@ -1,0 +1,173 @@
+{
+  "$schema": "https://rosie-spec.org/evidence/v1/manifest.schema.json",
+  "$comment": "ROSIE Evidence Manifest Template. This file is part of a validation evidence package.",
+
+  "@context": "https://gxp.md/evidence/v1",
+
+  "package_id": "{TIER}-{SPEC_ID}-{TIMESTAMP}",
+  "$comment-package_id": "Format: OQ-SPEC-001-001-20250207T142315Z (tier, spec ID, ISO 8601 timestamp)",
+
+  "spec_id": "SPEC-XXX-XXX",
+  "$comment-spec_id": "The GxP specification ID this evidence validates (e.g., SPEC-001-001)",
+
+  "tier": "OQ",
+  "$comment-tier": "Validation tier: IQ (Installation), OQ (Operational), or PQ (Performance)",
+
+  "traced_user_story": "US-XXX-XXX",
+  "$comment-traced_user_story": "The user story this specification implements (e.g., US-001-001)",
+
+  "traced_requirement": "REQ-XXX",
+  "$comment-traced_requirement": "The top-level requirement this traces to (e.g., REQ-001)",
+
+  "system_state_hash": "sha256:abcdef1234567890...",
+  "$comment-system_state_hash": "SHA-256 hash of system_context.md to prove which system version was tested",
+
+  "git_commit": "a1b2c3d4e5f6...",
+  "$comment-git_commit": "Git commit hash of the code that was validated",
+
+  "git_tag": "v1.0.0-validated",
+  "$comment-git_tag": "Optional: Git tag marking this validated release",
+
+  "created_at": "2025-02-07T14:23:15.123Z",
+  "$comment-created_at": "ISO 8601 timestamp when evidence package was generated",
+
+  "created_by": {
+    "agent": "claude-sonnet-4.5",
+    "user": "john.smith@company.com",
+    "role": "Quality Engineer"
+  },
+
+  "test_environment": {
+    "name": "Staging",
+    "url": "https://staging.example.com",
+    "database": "PostgreSQL 15.3",
+    "runtime": "Node.js 20.11.0",
+    "os": "Ubuntu 22.04 LTS"
+  },
+
+  "files": [
+    {
+      "path": "unit-tests/junit-report.xml",
+      "description": "JUnit XML test results for unit tests",
+      "hash": "sha256:abc123...",
+      "size_bytes": 12345,
+      "mime_type": "application/xml"
+    },
+    {
+      "path": "integration-tests/api-test-results.json",
+      "description": "Integration test results for API endpoints",
+      "hash": "sha256:def456...",
+      "size_bytes": 8192,
+      "mime_type": "application/json"
+    },
+    {
+      "path": "e2e-tests/playwright-report.html",
+      "description": "End-to-end test execution report",
+      "hash": "sha256:ghi789...",
+      "size_bytes": 45678,
+      "mime_type": "text/html"
+    },
+    {
+      "path": "e2e-tests/screenshots/audit-log-view.png",
+      "description": "Screenshot of audit log viewer (successful test)",
+      "hash": "sha256:jkl012...",
+      "size_bytes": 234567,
+      "mime_type": "image/png"
+    },
+    {
+      "path": "coverage/lcov-report/index.html",
+      "description": "Code coverage report (HTML format)",
+      "hash": "sha256:mno345...",
+      "size_bytes": 56789,
+      "mime_type": "text/html"
+    },
+    {
+      "path": "coverage/coverage-summary.json",
+      "description": "Code coverage summary (machine-readable)",
+      "hash": "sha256:pqr678...",
+      "size_bytes": 1024,
+      "mime_type": "application/json"
+    },
+    {
+      "path": "source-code/git-diff.patch",
+      "description": "Git diff showing changes introduced by this specification",
+      "hash": "sha256:stu901...",
+      "size_bytes": 3456,
+      "mime_type": "text/x-patch"
+    },
+    {
+      "path": "traceability/requirement-trace.json",
+      "description": "Traceability matrix (REQ → US → SPEC → Source Files → Tests)",
+      "hash": "sha256:vwx234...",
+      "size_bytes": 2048,
+      "mime_type": "application/json"
+    }
+  ],
+
+  "total_size_bytes": 364099,
+  "$comment-total_size_bytes": "Sum of size_bytes for all files in this package",
+
+  "file_count": 8,
+  "$comment-file_count": "Total number of files in this evidence package",
+
+  "test_summary": {
+    "total_tests": 25,
+    "passed": 25,
+    "failed": 0,
+    "skipped": 0,
+    "duration_seconds": 42.5,
+    "coverage_percent": 85.3
+  },
+
+  "acceptance_criteria_verified": [
+    {
+      "criterion_id": "AC-1",
+      "description": "System records audit events with all required fields",
+      "status": "PASS",
+      "evidence_file": "integration-tests/api-test-results.json"
+    },
+    {
+      "criterion_id": "AC-2",
+      "description": "Audit records are write-only (cannot be modified)",
+      "status": "PASS",
+      "evidence_file": "integration-tests/api-test-results.json"
+    },
+    {
+      "criterion_id": "AC-3",
+      "description": "Audit log accessible to authorized personnel only",
+      "status": "PASS",
+      "evidence_file": "e2e-tests/playwright-report.html"
+    }
+  ],
+
+  "validation_result": "PASS",
+  "$comment-validation_result": "Overall result: PASS, FAIL, or PENDING",
+
+  "reviewer": {
+    "name": "Jane Doe",
+    "email": "jane.doe@company.com",
+    "role": "QA Lead",
+    "reviewed_at": "2025-02-07T15:30:00.000Z",
+    "signature_hash": "sha256:reviewer-signature-hash..."
+  },
+
+  "approver": {
+    "name": "Bob Smith",
+    "email": "bob.smith@company.com",
+    "role": "Quality Manager",
+    "approved_at": "2025-02-07T16:00:00.000Z",
+    "signature_hash": "sha256:approver-signature-hash..."
+  },
+
+  "notes": [
+    "All unit tests passed with 85.3% code coverage (exceeds 80% requirement)",
+    "End-to-end tests verified in staging environment matching production config",
+    "No defects found during OQ testing"
+  ],
+
+  "related_packages": [
+    "IQ-SPEC-001-001-20250201T100000Z",
+    "OQ-SPEC-001-002-20250207T150000Z"
+  ],
+  "$comment-related_packages": "Other evidence packages related to this specification or feature"
+}

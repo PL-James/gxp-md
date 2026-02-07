@@ -1,0 +1,211 @@
+---
+# GxP.MD Project Definition
+# This file establishes GxP compliance requirements for AI-assisted development.
+# Fill in ALL fields before starting development work.
+
+# ============================================================================
+# PROJECT METADATA
+# ============================================================================
+
+project:
+  # Short, memorable name for this project
+  name: "Your Project Name"
+
+  # Semantic version (increment on major changes)
+  version: "0.1.0"
+
+  # Brief description of what this system does
+  description: "One-sentence description of project purpose"
+
+  # GxP risk classification determines validation rigor
+  # HIGH    = Patient safety impact, regulatory submissions, GMP records
+  # MEDIUM  = Quality system impact, indirect patient safety
+  # LOW     = Supporting tools, non-GxP infrastructure
+  gxp_risk: HIGH
+
+  # Current validation lifecycle state
+  # DRAFT       = Under development, not validated
+  # VALIDATED   = Passed IQ/OQ/PQ, approved for use
+  # DEPRECATED  = No longer supported, migration required
+  validation_status: DRAFT
+
+# ============================================================================
+# REGULATORY CONTEXT
+# ============================================================================
+
+regulatory:
+  # Intended use statement (critical for scope control)
+  intended_use: |
+    Describe what this system is designed to do and WHO uses it.
+    Example: "Web application for quality managers to review and approve
+    batch records in accordance with 21 CFR Part 11."
+
+  # Applicable regulatory standards
+  standards:
+    - "21 CFR Part 11"  # FDA Electronic Records/Signatures (US)
+    - "EU Annex 11"     # Computerized Systems (EU)
+    # Add others as applicable: GAMP 5, ISO 13485, GDP, etc.
+
+  # GAMP Software Category (determines validation approach)
+  # 1 = Infrastructure (OS, database)
+  # 3 = Non-configured products (COTS)
+  # 4 = Configured products (ERP with config)
+  # 5 = Custom applications (bespoke software) ← Most AI-generated code
+  gamp_category: 5
+
+  # Data classification level
+  # Options: GxP-Critical, GxP-Supporting, Non-GxP
+  data_classification: "GxP-Critical"
+
+# ============================================================================
+# SYSTEM BOUNDARY
+# ============================================================================
+
+system_boundary:
+  # What IS part of the validated system
+  includes:
+    - "Web application frontend (React)"
+    - "Backend API (Express.js)"
+    - "PostgreSQL database schema"
+    - "Authentication/authorization logic"
+    # List all components that require validation
+
+  # What is NOT part of the validated system
+  excludes:
+    - "Development tooling (TypeScript compiler, bundlers)"
+    - "CI/CD pipeline (GitHub Actions)"
+    - "Cloud infrastructure (Railway platform)"
+    - "Third-party libraries (React, Express)"
+    # Clearly state what you're NOT validating
+
+# ============================================================================
+# AI CODING AGENT INSTRUCTIONS
+# ============================================================================
+
+ai_instructions:
+  # Compliance artifacts are in .gxp/ directory:
+  #   .gxp/system_context.md          ← System overview
+  #   .gxp/requirements/REQ-*.md      ← Business/regulatory requirements
+  #   .gxp/user_stories/US-*.md       ← Testable user scenarios
+  #   .gxp/specs/SPEC-*.md            ← Technical specifications
+  #   .gxp/evidence/                  ← Test results, validation packages
+
+  traceability_required: true
+
+  # Requirements for code changes:
+  code_modification_rules:
+    - "MUST link all code changes to a SPEC-* specification"
+    - "MUST update source_files[] in SPEC when modifying code"
+    - "MUST update test_files[] in SPEC when adding/changing tests"
+    - "MUST generate evidence package after significant changes"
+    - "MUST NOT modify GxP-critical code without a traced specification"
+
+  # Evidence generation triggers:
+  evidence_triggers:
+    - "Completion of IQ/OQ/PQ testing tier"
+    - "Major feature implementation (linked to SPEC)"
+    - "Bug fix in GxP-critical code path"
+    - "Before creating a validation-ready release"
+
+  # Test coverage requirements (adjust based on risk level)
+  test_requirements:
+    unit_coverage_min: 80      # % of lines covered by unit tests
+    integration_required: true # Must have integration tests
+    e2e_required: true         # Must have end-to-end tests
+    performance_required: false # Load/stress testing needed?
+
+# ============================================================================
+# CHANGE CONTROL
+# ============================================================================
+
+change_control:
+  # Who must approve changes to GxP-critical code
+  approval_required:
+    - role: "Quality Assurance"
+      required_for: ["HIGH risk changes", "Validation artifacts"]
+    - role: "Technical Lead"
+      required_for: ["Architecture changes", "SPEC modifications"]
+
+  # Git workflow requirements
+  git_requirements:
+    branch_protection: true     # Require PR reviews for main
+    signed_commits: false       # GPG signing required?
+    linear_history: true        # No merge commits (rebase only)
+
+  # Validation re-test triggers (when to re-run OQ/PQ)
+  revalidation_triggers:
+    - "Changes to authentication/authorization logic"
+    - "Database schema modifications"
+    - "Changes to audit trail generation"
+    - "Upgrade of critical dependencies (React, database driver)"
+
+# ============================================================================
+# CONTACTS
+# ============================================================================
+
+contacts:
+  project_owner:
+    name: "Your Name"
+    email: "you@company.com"
+    role: "Project Lead"
+
+  quality_owner:
+    name: "QA Lead Name"
+    email: "qa@company.com"
+    role: "Quality Assurance"
+
+---
+
+# {Project Name} — GxP.MD Configuration
+
+## Quick Start for AI Agents
+
+Before making ANY code changes:
+
+1. **Read** `.gxp/system_context.md` to understand system architecture
+2. **Identify** the requirement you're implementing (find the REQ-* file)
+3. **Locate** the user story (US-*) and specification (SPEC-*)
+4. **Verify** the spec's `source_files` and `test_files` match your changes
+5. **Update** the SPEC frontmatter if you modify different files
+6. **Run** all tests and generate evidence package when done
+
+## System Overview
+
+<!-- Provide a brief architectural summary here -->
+This system is a [describe architecture: web app, API, batch processor, etc.]
+built with [list tech stack] to support [business purpose].
+
+**GxP Scope:** [Describe what parts are GxP-critical vs. supporting]
+
+## Traceability Hierarchy
+
+```
+REQ-001 (Requirement)
+  └── US-001-001 (User Story)
+      └── SPEC-001-001 (Specification)
+          ├── src/auth/login.ts
+          ├── src/auth/session.ts
+          └── tests/auth.test.ts
+```
+
+All code MUST trace back to a SPEC. All SPECs MUST trace to a US. All USs MUST trace to a REQ.
+
+## Development Workflow
+
+1. **Plan**: Identify or create REQ → US → SPEC hierarchy
+2. **Code**: Implement per SPEC, update `source_files` list
+3. **Test**: Write tests, update `test_files` list
+4. **Evidence**: Generate validation package for the SPEC
+5. **Review**: QA reviews evidence before merge
+
+## Validation Status
+
+- **Installation Qualification (IQ):** Not Started
+- **Operational Qualification (OQ):** Not Started
+- **Performance Qualification (PQ):** Not Started
+
+---
+
+**This project follows the GxP.MD standard.**
+Specification: https://gxp.md/spec/v1
+Evidence format: ROSIE (Regulatory Open Standards for Inspection Evidence)

@@ -1,0 +1,209 @@
+# GxP.MD Profile: Pharmaceutical Standard
+# Comprehensive profile for pharmaceutical software development
+# Covers FDA, EU, and ICH requirements for computerized systems
+
+# Profile metadata
+name: "Pharmaceutical Standard"
+description: "Comprehensive regulatory profile for pharmaceutical software development covering FDA 21 CFR Part 11, EU Annex 11, ICH Q7/Q9/Q10, and GAMP 5"
+version: "1.0.0"
+applicable_industries:
+  - pharmaceutical_manufacturing
+  - active_pharmaceutical_ingredients
+  - drug_development
+  - quality_systems
+
+# Standards covered
+standards:
+  - id: "21-cfr-11"
+    name: "21 CFR Part 11 - Electronic Records and Electronic Signatures"
+    mandatory_sections:
+      - "11.10 - Controls for closed systems"
+      - "11.10(a) - Validation of systems"
+      - "11.10(b) - Ability to generate accurate copies"
+      - "11.10(c) - Protection of records"
+      - "11.10(d) - Limiting system access to authorized individuals"
+      - "11.10(e) - Use of secure, computer-generated, time-stamped audit trails"
+      - "11.10(k) - Use of authority checks"
+      - "11.50 - Signature manifestations"
+      - "11.70 - Signature/record linking"
+      - "11.100 - General requirements for electronic signatures"
+      - "11.200 - Electronic signature components and controls"
+      - "11.300 - Controls for identification codes/passwords"
+    references:
+      - "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?CFRPart=11"
+      - "FDA Guidance for Industry: Part 11, Electronic Records; Electronic Signatures — Scope and Application (2003)"
+
+  - id: "eu-annex-11"
+    name: "EU GMP Annex 11 - Computerised Systems"
+    mandatory_sections:
+      - "§1 - Risk Management"
+      - "§4 - Validation"
+      - "§4.1 - Documentation of validation process"
+      - "§4.3 - Test methods and scenarios"
+      - "§4.4 - Installation and Operational Qualification"
+      - "§4.5 - Performance Qualification"
+      - "§4.6 - Periodic evaluation"
+      - "§6 - Accuracy Checks"
+      - "§7 - Data Storage"
+      - "§9 - Audit Trail"
+      - "§12 - Change and Configuration Management"
+      - "§13 - Periodic evaluation"
+      - "§15 - Business Continuity"
+    references:
+      - "https://ec.europa.eu/health/documents/eudralex/vol-4_en"
+      - "EudraLex Volume 4 - Good Manufacturing Practice (GMP) guidelines"
+
+  - id: "ich-q7"
+    name: "ICH Q7 - Good Manufacturing Practice Guide for Active Pharmaceutical Ingredients"
+    mandatory_sections:
+      - "§11 - Computerised Systems"
+      - "§11.1 - General requirements"
+      - "§11.2 - System validation"
+    references:
+      - "https://www.ich.org/page/quality-guidelines"
+
+  - id: "ich-q9"
+    name: "ICH Q9 - Quality Risk Management"
+    mandatory_sections:
+      - "Risk assessment methodologies"
+      - "Risk control measures"
+      - "Risk review and monitoring"
+    references:
+      - "https://www.ich.org/page/quality-guidelines"
+
+  - id: "ich-q10"
+    name: "ICH Q10 - Pharmaceutical Quality System"
+    mandatory_sections:
+      - "Process Performance and Product Quality Monitoring System"
+      - "Corrective Action and Preventive Action (CAPA) System"
+      - "Change Management System"
+      - "Management Review of Process Performance and Product Quality"
+    references:
+      - "https://www.ich.org/page/quality-guidelines"
+
+  - id: "gamp-5"
+    name: "GAMP 5 - A Risk-Based Approach to Compliant GxP Computerized Systems"
+    mandatory_sections:
+      - "Software categories and risk assessment"
+      - "V-Model lifecycle approach"
+      - "Validation planning and execution"
+      - "Supplier assessment"
+      - "Configuration management"
+    references:
+      - "ISPE GAMP 5 Guide (Second Edition)"
+
+# Risk level overrides
+risk_overrides:
+  HIGH:
+    coverage_threshold: 95
+    required_tiers: [IQ, OQ, PQ]
+    signing_required: true
+    review_required: true
+    mpa_required: true  # Multi-Party Authorization
+    additional_requirements:
+      - "Full traceability matrix required"
+      - "Formal validation protocol and report"
+      - "Qualification of development environment"
+      - "Supplier audit trail (if applicable)"
+  MEDIUM:
+    coverage_threshold: 80
+    required_tiers: [OQ, PQ]
+    signing_required: true
+    review_required: true
+    mpa_required: false
+    additional_requirements:
+      - "Traceability matrix required"
+      - "Risk assessment documentation"
+  LOW:
+    coverage_threshold: 60
+    required_tiers: [OQ]
+    signing_required: false
+    review_required: false
+    mpa_required: false
+    additional_requirements:
+      - "Basic test coverage documentation"
+
+# Additional gate checks specific to this profile
+additional_gates:
+  pre_commit:
+    - id: "audit-trail-check"
+      description: "Verify audit trail implementation for data modifications"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "grep -r 'auditLog\\|auditTrail' {changed_files}"
+
+    - id: "signature-validation"
+      description: "Verify electronic signature implementation meets 21 CFR 11.50/11.70"
+      applies_to: [HIGH]
+      check_command: "grep -r 'electronicSignature\\|eSignature' {changed_files}"
+
+  pre_merge:
+    - id: "validation-evidence"
+      description: "Ensure validation artifacts are complete"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "ls .gxp/validation/*.md"
+
+    - id: "traceability-matrix"
+      description: "Verify requirements traceability matrix is up-to-date"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "test -f .gxp/traceability/matrix.json"
+
+  pre_release:
+    - id: "part-11-compliance-report"
+      description: "Generate 21 CFR Part 11 compliance summary"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp validate --profile pharma-standard --report part11"
+
+    - id: "validation-summary"
+      description: "Generate validation summary report per GAMP 5"
+      applies_to: [HIGH]
+      check_command: "gxp validate --profile pharma-standard --report validation-summary"
+
+# ALCOA+ enforcement settings
+alcoa_overrides:
+  attributable:
+    enforce: strict
+    method: "electronic_signature"  # Must use e-signatures per 21 CFR 11
+
+  legible:
+    enforce: strict
+    method: "human_readable_export"  # Must provide human-readable format per 21 CFR 11.10(b)
+
+  contemporaneous:
+    enforce: strict
+    method: "timestamp_on_commit"
+
+  original:
+    enforce: strict
+    method: "immutable_records"  # Original records must be preserved per 21 CFR 11.10(e)
+
+  accurate:
+    enforce: strict
+    method: "automated_validation"
+
+  complete:
+    enforce: strict
+    method: "full_context_capture"  # Complete audit trail per 21 CFR 11.10(e)
+
+  consistent:
+    enforce: strict
+    method: "timestamp_synchronization"
+
+  enduring:
+    enforce: strict
+    method: "long_term_retention"  # Per retention requirements
+
+  available:
+    enforce: strict
+    method: "accessible_archives"  # Must be retrievable per 21 CFR 11.10(b)
+
+# Profile-specific configuration
+configuration:
+  validation_approach: "prospective"  # Per GAMP 5 for new systems
+  revalidation_trigger:
+    - "Major software updates"
+    - "Infrastructure changes"
+    - "Regulatory inspection findings"
+  supplier_assessment_required: true
+  design_review_required: true
+  user_requirements_mandatory: true
+  functional_specifications_mandatory: true

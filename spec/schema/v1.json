@@ -1,0 +1,653 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://gxp.md/schema/v1.json",
+  "title": "GxP.MD Frontmatter Schema",
+  "description": "JSON Schema for validating GxP.MD frontmatter in compliance instruction files for AI-assisted software development in regulated industries",
+  "type": "object",
+  "required": [
+    "gxpmd_version",
+    "project",
+    "regulatory",
+    "risk",
+    "artifacts",
+    "vmodel",
+    "gates",
+    "alcoa",
+    "evidence"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "gxpmd_version": {
+      "type": "string",
+      "description": "GxP.MD specification version (semantic versioning)",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+      "examples": ["1.0.0", "1.2.3-beta.1"]
+    },
+    "project": {
+      "type": "object",
+      "description": "Project identification and metadata",
+      "required": ["name", "id", "version", "owner"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Human-readable project name",
+          "minLength": 1,
+          "examples": ["Nexus Validation Platform"]
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique project identifier (slug format)",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "examples": ["nexus-validation-platform"]
+        },
+        "version": {
+          "type": "string",
+          "description": "Project version (semantic versioning)",
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+          "examples": ["2.1.0"]
+        },
+        "owner": {
+          "type": "string",
+          "description": "Project owner or responsible party",
+          "minLength": 1,
+          "examples": ["PharmaLedger Association"]
+        },
+        "contact": {
+          "type": "string",
+          "description": "Contact email for project inquiries",
+          "format": "email",
+          "examples": ["james@pharmaledger.org"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Brief project description",
+          "minLength": 1,
+          "examples": ["GxP validation platform for pharmaceutical software systems"]
+        }
+      }
+    },
+    "regulatory": {
+      "type": "object",
+      "description": "Regulatory framework and compliance requirements",
+      "required": ["profile"],
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "type": "string",
+          "description": "Pre-built regulatory profile to apply",
+          "enum": [
+            "pharma-standard",
+            "medical-device",
+            "clinical-trial",
+            "laboratory",
+            "custom"
+          ],
+          "examples": ["pharma-standard"]
+        },
+        "jurisdictions": {
+          "type": "array",
+          "description": "Regulatory jurisdictions that apply",
+          "items": {
+            "type": "string",
+            "enum": [
+              "FDA",
+              "EMA",
+              "PMDA",
+              "HC",
+              "TGA",
+              "MHRA",
+              "ANVISA",
+              "CFDA",
+              "ICH",
+              "WHO"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [["FDA", "EMA"]]
+        },
+        "frameworks": {
+          "type": "array",
+          "description": "Specific regulatory frameworks to comply with",
+          "items": {
+            "type": "string",
+            "enum": [
+              "21-cfr-11",
+              "21-cfr-58",
+              "21-cfr-210-211",
+              "21-cfr-312",
+              "21-cfr-820",
+              "eu-annex-11",
+              "eu-gdpr",
+              "ich-e6-r2",
+              "ich-q7",
+              "ich-q9",
+              "ich-q10",
+              "gamp-5",
+              "iec-62304",
+              "iso-13485",
+              "iso-14971",
+              "iso-17025"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [["21-cfr-11", "eu-annex-11", "gamp-5"]]
+        },
+        "gamp_category": {
+          "type": "string",
+          "description": "GAMP 5 software category classification",
+          "enum": ["1", "3", "4", "5"],
+          "examples": ["5"]
+        },
+        "custom_requirements": {
+          "type": "array",
+          "description": "Additional custom regulatory requirements",
+          "items": {
+            "type": "object",
+            "required": ["id", "description"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique identifier for requirement"
+              },
+              "description": {
+                "type": "string",
+                "description": "Description of requirement"
+              },
+              "reference": {
+                "type": "string",
+                "description": "Reference to source document or regulation"
+              }
+            }
+          }
+        }
+      }
+    },
+    "risk": {
+      "type": "object",
+      "description": "Risk classification and risk-based controls",
+      "required": ["overall"],
+      "additionalProperties": false,
+      "properties": {
+        "overall": {
+          "type": "string",
+          "description": "Overall project risk classification",
+          "enum": ["LOW", "MEDIUM", "HIGH"],
+          "examples": ["HIGH"]
+        },
+        "matrix": {
+          "type": "object",
+          "description": "Risk-based configuration matrix",
+          "additionalProperties": false,
+          "properties": {
+            "HIGH": {
+              "$ref": "#/definitions/riskLevelConfig"
+            },
+            "MEDIUM": {
+              "$ref": "#/definitions/riskLevelConfig"
+            },
+            "LOW": {
+              "$ref": "#/definitions/riskLevelConfig"
+            }
+          }
+        }
+      }
+    },
+    "artifacts": {
+      "type": "object",
+      "description": "Artifact generation and management configuration",
+      "required": ["engine", "directory"],
+      "additionalProperties": false,
+      "properties": {
+        "engine": {
+          "type": "string",
+          "description": "Artifact engine to use (ROSIE or custom)",
+          "enum": ["rosie", "custom"],
+          "examples": ["rosie"]
+        },
+        "directory": {
+          "type": "string",
+          "description": "Directory path for artifact storage",
+          "pattern": "^[^\\0]+$",
+          "examples": [".gxp"]
+        },
+        "id_schema": {
+          "type": "string",
+          "description": "Artifact ID generation schema pattern",
+          "examples": ["{project_id}-{category}-{sequence:04d}"]
+        },
+        "traceability_enforcement": {
+          "type": "string",
+          "description": "Level of traceability enforcement",
+          "enum": ["strict", "moderate", "flexible"],
+          "default": "strict",
+          "examples": ["strict"]
+        },
+        "auto_generate": {
+          "type": "boolean",
+          "description": "Automatically generate artifacts on commit",
+          "default": true
+        },
+        "templates": {
+          "type": "object",
+          "description": "Custom artifact templates",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "vmodel": {
+      "type": "object",
+      "description": "V-Model lifecycle configuration",
+      "required": ["phases"],
+      "additionalProperties": false,
+      "properties": {
+        "phases": {
+          "type": "array",
+          "description": "Active V-Model phases for this project",
+          "items": {
+            "type": "string",
+            "enum": [
+              "requirements",
+              "design",
+              "implementation",
+              "qualification",
+              "deployment",
+              "maintenance"
+            ]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [["requirements", "design", "implementation", "qualification"]]
+        },
+        "tiers": {
+          "type": "object",
+          "description": "Qualification tier configuration",
+          "additionalProperties": false,
+          "properties": {
+            "IQ": {
+              "$ref": "#/definitions/qualificationTier"
+            },
+            "OQ": {
+              "$ref": "#/definitions/qualificationTier"
+            },
+            "PQ": {
+              "$ref": "#/definitions/qualificationTier"
+            }
+          }
+        },
+        "lifecycle_model": {
+          "type": "string",
+          "description": "Software development lifecycle model",
+          "enum": ["v_model", "agile", "waterfall", "iterative"],
+          "default": "v_model",
+          "examples": ["v_model"]
+        }
+      }
+    },
+    "gates": {
+      "type": "object",
+      "description": "Quality gate definitions",
+      "required": ["pre_commit", "pre_merge", "pre_release"],
+      "additionalProperties": false,
+      "properties": {
+        "pre_commit": {
+          "type": "array",
+          "description": "Gates that run before each commit",
+          "items": {
+            "$ref": "#/definitions/gateCheck"
+          }
+        },
+        "pre_merge": {
+          "type": "array",
+          "description": "Gates that run before merging to main branch",
+          "items": {
+            "$ref": "#/definitions/gateCheck"
+          }
+        },
+        "pre_release": {
+          "type": "array",
+          "description": "Gates that run before production release",
+          "items": {
+            "$ref": "#/definitions/gateCheck"
+          }
+        },
+        "custom": {
+          "type": "array",
+          "description": "Custom gate definitions",
+          "items": {
+            "$ref": "#/definitions/gateCheck"
+          }
+        }
+      }
+    },
+    "alcoa": {
+      "type": "object",
+      "description": "ALCOA+ data integrity principles enforcement",
+      "additionalProperties": false,
+      "properties": {
+        "attributable": {
+          "$ref": "#/definitions/alcoaPrinciple"
+        },
+        "legible": {
+          "$ref": "#/definitions/alcoaPrinciple"
+        },
+        "contemporaneous": {
+          "$ref": "#/definitions/alcoaPrinciple"
+        },
+        "original": {
+          "$ref": "#/definitions/alcoaPrinciple"
+        },
+        "accurate": {
+          "$ref": "#/definitions/alcoaPrinciple"
+        },
+        "complete": {
+          "$ref": "#/definitions/alcoaPrinciple"
+        },
+        "consistent": {
+          "$ref": "#/definitions/alcoaPrinciple"
+        },
+        "enduring": {
+          "$ref": "#/definitions/alcoaPrinciple"
+        },
+        "available": {
+          "$ref": "#/definitions/alcoaPrinciple"
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Evidence collection and cryptographic verification",
+      "required": ["signing_algorithm", "key_management"],
+      "additionalProperties": false,
+      "properties": {
+        "signing_algorithm": {
+          "type": "string",
+          "description": "Cryptographic signing algorithm for evidence",
+          "enum": ["ed25519", "rsa-2048", "rsa-4096", "ecdsa-p256"],
+          "examples": ["ed25519"]
+        },
+        "key_management": {
+          "type": "string",
+          "description": "Key management strategy",
+          "enum": ["git", "vault", "hsm", "kms"],
+          "examples": ["git"]
+        },
+        "retention_days": {
+          "type": "integer",
+          "description": "Evidence retention period in days",
+          "minimum": 1,
+          "examples": [2555]
+        },
+        "state_hash": {
+          "type": "string",
+          "description": "Hash algorithm for state verification",
+          "enum": ["sha256", "sha3-256", "blake2b"],
+          "default": "sha256",
+          "examples": ["sha256"]
+        },
+        "audit_trail": {
+          "type": "boolean",
+          "description": "Enable comprehensive audit trail",
+          "default": true
+        },
+        "immutable_records": {
+          "type": "boolean",
+          "description": "Enforce immutable evidence records",
+          "default": true
+        }
+      }
+    },
+    "agent": {
+      "type": "object",
+      "description": "AI agent behavior and instructions",
+      "additionalProperties": false,
+      "properties": {
+        "on_session_start": {
+          "type": "array",
+          "description": "Instructions to execute when agent session starts",
+          "items": {
+            "type": "string"
+          },
+          "examples": [
+            [
+              "Read GxP.MD file and understand regulatory requirements",
+              "Identify current V-Model phase from git branch",
+              "Load applicable quality gates for this phase"
+            ]
+          ]
+        },
+        "mode": {
+          "type": "string",
+          "description": "Agent operation mode",
+          "enum": ["autonomous", "assisted", "review-only"],
+          "default": "assisted",
+          "examples": ["assisted"]
+        },
+        "prohibited_actions": {
+          "type": "array",
+          "description": "Actions the agent must never perform",
+          "items": {
+            "type": "string"
+          },
+          "examples": [["Commit without signing", "Skip validation gates"]]
+        },
+        "required_confirmations": {
+          "type": "array",
+          "description": "Actions requiring explicit user confirmation",
+          "items": {
+            "type": "string"
+          },
+          "examples": [["Release to production", "Merge to main"]]
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "description": "System validation configuration",
+      "additionalProperties": false,
+      "properties": {
+        "approach": {
+          "type": "string",
+          "description": "Validation approach",
+          "enum": ["prospective", "concurrent", "retrospective"],
+          "examples": ["prospective"]
+        },
+        "protocol_required": {
+          "type": "boolean",
+          "description": "Formal validation protocol required",
+          "default": false
+        },
+        "report_required": {
+          "type": "boolean",
+          "description": "Formal validation report required",
+          "default": false
+        },
+        "revalidation_triggers": {
+          "type": "array",
+          "description": "Events that trigger revalidation",
+          "items": {
+            "type": "string"
+          },
+          "examples": [["Major version upgrade", "Infrastructure change"]]
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata and custom fields",
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "riskLevelConfig": {
+      "type": "object",
+      "description": "Configuration for a specific risk level",
+      "required": ["coverage_threshold", "required_tiers"],
+      "additionalProperties": false,
+      "properties": {
+        "coverage_threshold": {
+          "type": "integer",
+          "description": "Minimum test coverage percentage required",
+          "minimum": 0,
+          "maximum": 100,
+          "examples": [95]
+        },
+        "required_tiers": {
+          "type": "array",
+          "description": "Required qualification tiers",
+          "items": {
+            "type": "string",
+            "enum": ["IQ", "OQ", "PQ"]
+          },
+          "minItems": 1,
+          "uniqueItems": true,
+          "examples": [["IQ", "OQ", "PQ"]]
+        },
+        "signing_required": {
+          "type": "boolean",
+          "description": "Electronic signature required for commits",
+          "examples": [true]
+        },
+        "review_required": {
+          "type": "boolean",
+          "description": "Peer review required before merge",
+          "examples": [true]
+        },
+        "mpa_required": {
+          "type": "boolean",
+          "description": "Multi-Party Authorization required",
+          "examples": [true]
+        }
+      }
+    },
+    "qualificationTier": {
+      "type": "object",
+      "description": "Qualification tier configuration",
+      "required": ["enabled"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether this tier is enabled"
+        },
+        "coverage_min": {
+          "type": "integer",
+          "description": "Minimum coverage for this tier",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "test_categories": {
+          "type": "array",
+          "description": "Test categories included in this tier",
+          "items": {
+            "type": "string"
+          }
+        },
+        "artifacts_required": {
+          "type": "array",
+          "description": "Required artifacts for this tier",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "gateCheck": {
+      "type": "object",
+      "description": "Quality gate check definition",
+      "required": ["id", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for this gate",
+          "pattern": "^[a-z0-9-]+$",
+          "examples": ["test-coverage"]
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable description of gate purpose",
+          "minLength": 1,
+          "examples": ["Verify minimum test coverage threshold"]
+        },
+        "command": {
+          "type": "string",
+          "description": "Command to execute for this gate",
+          "examples": ["npm test -- --coverage"]
+        },
+        "blocking": {
+          "type": "boolean",
+          "description": "Whether failure blocks the operation",
+          "default": true
+        },
+        "applies_to_risk": {
+          "type": "array",
+          "description": "Risk levels this gate applies to",
+          "items": {
+            "type": "string",
+            "enum": ["LOW", "MEDIUM", "HIGH"]
+          },
+          "uniqueItems": true,
+          "examples": [["MEDIUM", "HIGH"]]
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Timeout in seconds for gate execution",
+          "minimum": 1,
+          "examples": [300]
+        },
+        "retry": {
+          "type": "object",
+          "description": "Retry configuration for flaky checks",
+          "properties": {
+            "max_attempts": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "delay_seconds": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "alcoaPrinciple": {
+      "type": "object",
+      "description": "ALCOA+ principle enforcement configuration",
+      "required": ["enforce"],
+      "additionalProperties": false,
+      "properties": {
+        "enforce": {
+          "type": "string",
+          "description": "Enforcement level for this principle",
+          "enum": ["strict", "moderate", "flexible", "disabled"],
+          "examples": ["strict"]
+        },
+        "method": {
+          "type": "string",
+          "description": "Implementation method for enforcement",
+          "examples": ["electronic_signature", "timestamp_on_commit"]
+        },
+        "validation_command": {
+          "type": "string",
+          "description": "Command to validate compliance",
+          "examples": ["gxp alcoa --check attributable"]
+        },
+        "exemptions": {
+          "type": "array",
+          "description": "File patterns exempt from this principle",
+          "items": {
+            "type": "string"
+          },
+          "examples": [["*.test.ts", "*.spec.ts"]]
+        }
+      }
+    }
+  }
+}

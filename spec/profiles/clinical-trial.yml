@@ -1,0 +1,253 @@
+# GxP.MD Profile: Clinical Trial
+# Profile for clinical trial and research software
+# Covers ICH E6(R2) GCP, 21 CFR Part 11, and GDPR
+
+# Profile metadata
+name: "Clinical Trial"
+description: "Regulatory profile for clinical trial software development covering ICH E6(R2) Good Clinical Practice, 21 CFR Part 11, and GDPR data protection requirements"
+version: "1.0.0"
+applicable_industries:
+  - clinical_research
+  - clinical_data_management
+  - electronic_data_capture
+  - trial_management_systems
+  - patient_reported_outcomes
+
+# Standards covered
+standards:
+  - id: "ich-e6-r2"
+    name: "ICH E6(R2) - Good Clinical Practice"
+    mandatory_sections:
+      - "§5.5 - Trial Management, Data Handling, and Record Keeping"
+      - "§5.5.3 - Computerized systems"
+      - "§5.5.3(a) - System design and validation"
+      - "§5.5.3(b) - Standard Operating Procedures"
+      - "§5.5.3(c) - System controls"
+      - "§5.5.3(d) - Data changes and audit trail"
+      - "§5.5.3(e) - System security and access"
+      - "§5.5.3(f) - Data backup and recovery"
+      - "§5.5.3(g) - Data retention"
+      - "§8.3.25 - Essential documents"
+    references:
+      - "https://www.ich.org/page/efficacy-guidelines"
+      - "ICH E6(R2) Good Clinical Practice guidance"
+
+  - id: "fda-21-cfr-11"
+    name: "21 CFR Part 11 - Electronic Records and Electronic Signatures"
+    mandatory_sections:
+      - "§11.10 - Controls for closed systems"
+      - "§11.10(a) - System validation"
+      - "§11.10(b) - Accurate copy generation"
+      - "§11.10(c) - Record protection"
+      - "§11.10(d) - Access limitation"
+      - "§11.10(e) - Audit trails"
+      - "§11.10(k) - Authority checks"
+      - "§11.50 - Signature manifestations"
+      - "§11.70 - Signature/record linking"
+    references:
+      - "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?CFRPart=11"
+
+  - id: "gdpr"
+    name: "GDPR - General Data Protection Regulation"
+    mandatory_sections:
+      - "Article 5 - Principles relating to processing of personal data"
+      - "Article 6 - Lawfulness of processing"
+      - "Article 9 - Processing of special categories of personal data"
+      - "Article 17 - Right to erasure ('right to be forgotten')"
+      - "Article 25 - Data protection by design and by default"
+      - "Article 30 - Records of processing activities"
+      - "Article 32 - Security of processing"
+      - "Article 33 - Notification of a personal data breach"
+      - "Article 35 - Data protection impact assessment"
+    references:
+      - "https://gdpr-info.eu/"
+      - "EU Regulation 2016/679"
+
+  - id: "fda-21-cfr-312"
+    name: "21 CFR Part 312 - Investigational New Drug Application"
+    mandatory_sections:
+      - "§312.62 - Investigator recordkeeping and record retention"
+    references:
+      - "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?CFRPart=312"
+
+  - id: "ich-e8"
+    name: "ICH E8 - General Considerations for Clinical Studies"
+    mandatory_sections:
+      - "Data collection and quality assurance"
+    references:
+      - "https://www.ich.org/page/efficacy-guidelines"
+
+# Risk level overrides
+risk_overrides:
+  HIGH:
+    coverage_threshold: 90
+    required_tiers: [IQ, OQ, PQ]
+    signing_required: true
+    review_required: true
+    mpa_required: true
+    additional_requirements:
+      - "Full validation per ICH E6(R2) §5.5.3(a)"
+      - "Data Protection Impact Assessment (DPIA) per GDPR Article 35"
+      - "Patient data encryption at rest and in transit"
+      - "Complete audit trail per 21 CFR 11.10(e)"
+      - "Source Data Verification (SDV) capability"
+      - "Electronic Trial Master File (eTMF) integration"
+
+  MEDIUM:
+    coverage_threshold: 80
+    required_tiers: [OQ, PQ]
+    signing_required: true
+    review_required: true
+    mpa_required: false
+    additional_requirements:
+      - "System validation documentation"
+      - "GDPR compliance verification"
+      - "Audit trail for data modifications"
+      - "User access controls"
+
+  LOW:
+    coverage_threshold: 65
+    required_tiers: [OQ]
+    signing_required: false
+    review_required: false
+    mpa_required: false
+    additional_requirements:
+      - "Basic validation evidence"
+      - "GDPR data minimization compliance"
+
+# Additional gate checks specific to this profile
+additional_gates:
+  pre_commit:
+    - id: "pii-detection"
+      description: "Scan for hardcoded PII or PHI data"
+      applies_to: [HIGH, MEDIUM, LOW]
+      check_command: "gxp pii-scan {changed_files}"
+
+    - id: "consent-check"
+      description: "Verify consent tracking mechanisms are in place"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "grep -r 'consent\\|informed.*consent' {changed_files}"
+
+    - id: "audit-trail-check"
+      description: "Verify audit trail for clinical data modifications per ICH E6(R2) §5.5.3(d)"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp audit-trail --verify {changed_files}"
+
+  pre_merge:
+    - id: "gdpr-compliance"
+      description: "Verify GDPR compliance checklist"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp gdpr --checklist"
+
+    - id: "data-retention"
+      description: "Verify data retention policies per ICH E6(R2) §5.5.3(g)"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "test -f .gxp/retention/policy.md"
+
+    - id: "access-controls"
+      description: "Verify role-based access control implementation per ICH E6(R2) §5.5.3(e)"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp rbac --verify"
+
+  pre_release:
+    - id: "validation-report"
+      description: "Generate validation report per ICH E6(R2) §5.5.3(a)"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp validate --profile clinical-trial --report validation"
+
+    - id: "dpia-check"
+      description: "Verify Data Protection Impact Assessment per GDPR Article 35"
+      applies_to: [HIGH]
+      check_command: "test -f .gxp/gdpr/dpia.md"
+
+    - id: "21cfr11-compliance"
+      description: "Generate 21 CFR Part 11 compliance report"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp validate --profile clinical-trial --report part11"
+
+# ALCOA+ enforcement settings
+alcoa_overrides:
+  attributable:
+    enforce: strict
+    method: "electronic_signature"  # Per 21 CFR 11 and ICH E6(R2) §5.5.3(d)
+    additional_notes: "Every data point must be attributable to specific user and timestamp"
+
+  legible:
+    enforce: strict
+    method: "human_readable_export"  # Per 21 CFR 11.10(b)
+    additional_notes: "Must support export to human-readable format for regulatory inspection"
+
+  contemporaneous:
+    enforce: strict
+    method: "timestamp_on_entry"  # Critical for clinical data
+    additional_notes: "Data must be recorded at time of observation/entry"
+
+  original:
+    enforce: strict
+    method: "immutable_records"  # Per ICH E6(R2) §5.5.3(d)
+    additional_notes: "Original records must be preserved; changes tracked in audit trail"
+
+  accurate:
+    enforce: strict
+    method: "automated_validation"
+    additional_notes: "Edit checks and validation rules must ensure data accuracy"
+
+  complete:
+    enforce: strict
+    method: "full_context_capture"  # Per ICH E6(R2)
+    additional_notes: "Complete audit trail with before/after values, reason for change"
+
+  consistent:
+    enforce: strict
+    method: "timestamp_synchronization"
+    additional_notes: "Consistent format and units across all sites and systems"
+
+  enduring:
+    enforce: strict
+    method: "long_term_retention"  # Per ICH E6(R2) §5.5.3(g)
+    additional_notes: "Retention per local regulations (typically 25+ years for clinical trial data)"
+
+  available:
+    enforce: strict
+    method: "accessible_archives"
+    additional_notes: "Must be available for inspection by regulatory authorities"
+
+# Profile-specific configuration
+configuration:
+  # GDPR-specific settings
+  gdpr:
+    data_minimization_required: true
+    purpose_limitation_enforced: true
+    right_to_erasure_compatible: true  # Must support GDPR Article 17 while maintaining trial integrity
+    consent_tracking_required: true
+    breach_notification_process: true
+    dpo_contact_required: true
+
+  # Clinical trial specific
+  clinical:
+    source_data_verification_required: true
+    electronic_case_report_forms: true
+    protocol_deviation_tracking: true
+    adverse_event_tracking: true
+    randomization_blinding_support: false  # Varies by trial type
+
+  # Patient data protection
+  data_protection:
+    pseudonymization_required: true  # Per GDPR Article 25
+    encryption_at_rest: true
+    encryption_in_transit: true
+    data_segregation: true  # Separate trial data by study
+    multi_site_access_control: true
+
+  # Validation approach
+  validation:
+    approach: "prospective"
+    user_acceptance_testing_required: true
+    site_training_documentation: true
+    system_retirement_plan: true
+
+  # Audit requirements
+  audit:
+    comprehensive_audit_trail: true
+    audit_trail_review_frequency: "quarterly"
+    audit_trail_retention_matches_data: true

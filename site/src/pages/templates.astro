@@ -1,0 +1,275 @@
+---
+import Base from '../layouts/Base.astro';
+import TemplatePreview from '../components/TemplatePreview.astro';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareSourceCode',
+  name: 'GxP.MD Starter Templates',
+  description: 'Downloadable starter templates for adopting GxP.MD compliance in your project.',
+  programmingLanguage: ['YAML', 'Markdown', 'JSON'],
+  codeRepository: 'https://github.com/PL-James/gxp-md',
+};
+
+const starterTemplate = `---
+gxpmd_version: "1.0.0"
+
+project:
+  name: "Your Project Name"        # Required
+  id: "your-project-id"            # UUID recommended
+  version: "0.1.0"                 # SemVer
+  owner: "Your Organization"
+  contact: "compliance@example.com"
+
+regulatory:
+  profile: pharma-standard         # pharma-standard | medical-device
+                                   # clinical-trial | laboratory
+  jurisdictions: [FDA, EMA]        # Regulatory bodies
+  frameworks:                      # Applicable standards
+    - "21 CFR Part 11"
+    - "EU Annex 11"
+  gamp_category: 5                 # GAMP software category (1-5)
+
+risk:
+  overall: MEDIUM                  # HIGH | MEDIUM | LOW
+
+artifacts:
+  engine: rosie                    # rosie | custom | none
+  directory: .gxp                  # Artifact root directory
+
+agent:
+  mode: risk_proportionate         # strict | risk_proportionate | advisory
+---
+
+# Core Principles
+
+The V-Model is law. NEVER write code without a
+corresponding User Story and Technical Specification.
+
+Traceability is mandatory. Every source file and test
+MUST link to a requirement or specification ID.`;
+
+const systemContextTemplate = `---
+id: "00000000-0000-0000-0000-000000000000"   # Generate a UUID
+project_name: "Your Project Name"
+version: "0.1.0"
+gxp_risk_rating: MEDIUM            # HIGH | MEDIUM | LOW
+validation_status: DRAFT           # DRAFT | VALIDATED | DEPRECATED
+intended_use: |
+  Describe the system's intended use, target users,
+  and regulatory context.
+regulatory_context:
+  primary_standards:
+    - "21 CFR Part 11"
+  gamp_category: 5
+  data_classification: "GxP-Critical"
+system_boundary:
+  includes:
+    - "src/"
+    - "packages/"
+  excludes:
+    - "node_modules/"
+    - "dist/"
+---
+
+# System Context
+
+## Overview
+[Describe the system, its purpose, and scope]
+
+## Architecture
+[High-level architecture description]
+
+## Regulatory Scope
+[Which regulations apply and why]`;
+
+const requirementTemplate = `---
+gxp_id: REQ-001                   # Sequential: REQ-001, REQ-002...
+title: "Requirement Title"
+parent_id: null                    # null for top-level requirements
+description: |
+  Detailed description of the requirement.
+risk_level: MEDIUM                 # HIGH | MEDIUM | LOW
+acceptance_criteria:
+  - "Criterion 1"
+  - "Criterion 2"
+validation_status: DRAFT
+---
+
+# REQ-001: Requirement Title
+
+## Description
+[Detailed requirement description]
+
+## Rationale
+[Why this requirement exists]
+
+## Risk Assessment
+[Risk level justification]`;
+
+const userStoryTemplate = `---
+gxp_id: US-001-001                # Format: US-{REQ}-{SEQ}
+title: "User Story Title"
+parent_id: REQ-001                # Links to parent requirement
+acceptance_criteria:
+  - "Given [context], when [action], then [result]"
+  - "Given [context], when [action], then [result]"
+verification_tier: OQ             # IQ | OQ | PQ
+validation_status: DRAFT
+---
+
+# US-001-001: User Story Title
+
+## As a [role]
+I want [capability]
+So that [benefit]
+
+## Acceptance Criteria
+1. Given [context], when [action], then [result]
+2. Given [context], when [action], then [result]`;
+
+const specTemplate = `---
+gxp_id: SPEC-001-001              # Format: SPEC-{REQ}-{SEQ}
+title: "Specification Title"
+parent_id: US-001-001             # Links to parent user story
+verification_tier: OQ             # IQ | OQ | PQ
+design_approach: |
+  Description of the implementation approach.
+source_files:
+  - "src/modules/feature/service.ts"
+test_files:
+  - "src/modules/feature/service.test.ts"
+validation_status: DRAFT
+---
+
+# SPEC-001-001: Specification Title
+
+## Design Approach
+[How this will be implemented]
+
+## Verification Method
+[How compliance will be verified]
+
+## Implementation Files
+- \`src/modules/feature/service.ts\``;
+
+const manifestTemplate = `{
+  "@context": "https://gxp.md/evidence/v1",
+  "package_id": "OQ-SPEC-001-001-2026-02-07T120000Z",
+  "spec_id": "SPEC-001-001",
+  "tier": "OQ",
+  "traced_user_story": "US-001-001",
+  "system_state_hash": "",
+  "git_commit": "",
+  "created_at": "",
+  "files": [
+    {
+      "path": "metadata.json",
+      "hash": "",
+      "size_bytes": 0
+    },
+    {
+      "path": "environment.json",
+      "hash": "",
+      "size_bytes": 0
+    },
+    {
+      "path": "test-output.log",
+      "hash": "",
+      "size_bytes": 0
+    },
+    {
+      "path": "artifacts/test-results.json",
+      "hash": "",
+      "size_bytes": 0
+    }
+  ],
+  "total_size_bytes": 0,
+  "file_count": 4
+}`;
+---
+
+<Base
+  title="Templates — GxP.MD"
+  description="Downloadable starter templates for GxP.MD adoption. Ready-to-use GxP.MD files, artifact templates, and evidence manifests."
+  type="article"
+  keywords="GxP templates, GxP.MD starter, compliance templates, ROSIE artifacts, evidence manifest"
+  jsonLd={jsonLd}
+>
+  <article class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <h1 class="text-4xl font-bold text-slate-900 mb-4">Templates</h1>
+    <p class="text-lg text-slate-600 mb-12 max-w-2xl">
+      Ready-to-use templates for adopting GxP.MD in your project. Download, fill in your details, and start developing with compliance built in.
+    </p>
+
+    <div class="space-y-8">
+      <TemplatePreview
+        filename="GxP.MD.starter"
+        description="Minimal GxP.MD file — drop this at your project root"
+        language="yaml"
+        content={starterTemplate}
+        downloadPath="https://raw.githubusercontent.com/PL-James/gxp-md/main/templates/GxP.MD.starter"
+      />
+
+      <TemplatePreview
+        filename="system-context.md"
+        description="Template for .gxp/system_context.md — the apex document"
+        language="yaml"
+        content={systemContextTemplate}
+        downloadPath="https://raw.githubusercontent.com/PL-James/gxp-md/main/templates/system-context.md"
+      />
+
+      <TemplatePreview
+        filename="requirement.md"
+        description="Template for .gxp/requirements/REQ-XXX.md"
+        language="yaml"
+        content={requirementTemplate}
+        downloadPath="https://raw.githubusercontent.com/PL-James/gxp-md/main/templates/requirement.md"
+      />
+
+      <TemplatePreview
+        filename="user-story.md"
+        description="Template for .gxp/user_stories/US-XXX-XXX.md"
+        language="yaml"
+        content={userStoryTemplate}
+        downloadPath="https://raw.githubusercontent.com/PL-James/gxp-md/main/templates/user-story.md"
+      />
+
+      <TemplatePreview
+        filename="specification.md"
+        description="Template for .gxp/specs/SPEC-XXX-XXX.md"
+        language="yaml"
+        content={specTemplate}
+        downloadPath="https://raw.githubusercontent.com/PL-James/gxp-md/main/templates/specification.md"
+      />
+
+      <TemplatePreview
+        filename="evidence-manifest.json"
+        description="Template for .gxp/evidence/ package manifest"
+        language="json"
+        content={manifestTemplate}
+        downloadPath="https://raw.githubusercontent.com/PL-James/gxp-md/main/templates/evidence-manifest.json"
+      />
+    </div>
+
+    <!-- Directory Structure -->
+    <section class="mt-16">
+      <h2 class="text-2xl font-bold text-slate-900 mb-4">Project Structure After Setup</h2>
+      <p class="text-slate-600 mb-6">
+        After creating your GxP.MD file and initializing the .gxp/ directory, your project should look like this:
+      </p>
+      <pre class="p-6 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-lg border border-slate-200"><code>{`your-project/
+├── GxP.MD                    ← Compliance contract (project root)
+├── .gxp/                     ← Artifact directory
+│   ├── system_context.md     ← Apex document
+│   ├── risk_assessment.log   ← Risk register
+│   ├── adr/                  ← Architecture Decision Records
+│   ├── requirements/         ← REQ-XXX.md files
+│   ├── user_stories/         ← US-XXX-XXX.md files
+│   ├── specs/                ← SPEC-XXX-XXX.md files
+│   └── evidence/             ← Signed evidence packages
+├── src/                      ← Source code
+└── tests/                    ← Test files with @gxp-tag annotations`}</code></pre>
+    </section>
+  </article>
+</Base>

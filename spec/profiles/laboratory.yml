@@ -1,0 +1,267 @@
+# GxP.MD Profile: Laboratory
+# Profile for laboratory information and quality control systems
+# Covers 21 CFR Part 58 GLP and ISO/IEC 17025
+
+# Profile metadata
+name: "Laboratory"
+description: "Regulatory profile for laboratory software systems covering 21 CFR Part 58 Good Laboratory Practice and ISO/IEC 17025 testing and calibration requirements"
+version: "1.0.0"
+applicable_industries:
+  - analytical_testing
+  - quality_control_labs
+  - research_laboratories
+  - calibration_laboratories
+  - environmental_testing
+
+# Standards covered
+standards:
+  - id: "fda-21-cfr-58"
+    name: "21 CFR Part 58 - Good Laboratory Practice for Nonclinical Laboratory Studies"
+    mandatory_sections:
+      - "§58.3 - Definitions"
+      - "§58.31 - Testing facility management"
+      - "§58.35 - Quality assurance unit"
+      - "§58.61 - Test and control article characterization"
+      - "§58.63 - Test and control article handling"
+      - "§58.81 - Standard operating procedures"
+      - "§58.120 - Protocol"
+      - "§58.130 - Conduct of a nonclinical laboratory study"
+      - "§58.185 - Reporting of nonclinical laboratory study results"
+      - "§58.190 - Storage and retrieval of records and data"
+      - "§58.195 - Retention of records"
+    references:
+      - "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?CFRPart=58"
+      - "FDA Guidance: Computerized Systems Used in Clinical Investigations"
+
+  - id: "iso-17025"
+    name: "ISO/IEC 17025 - General Requirements for the Competence of Testing and Calibration Laboratories"
+    mandatory_sections:
+      - "§6.2 - Personnel"
+      - "§6.4 - Equipment"
+      - "§6.4.13 - Records of equipment"
+      - "§6.5 - Metrological traceability"
+      - "§6.6 - Externally provided products and services"
+      - "§7.2 - Selection, verification and validation of methods"
+      - "§7.5 - Technical records"
+      - "§7.7 - Ensuring the validity of results"
+      - "§7.8 - Reporting of results"
+      - "§7.10 - Control of data and information management"
+      - "§7.11 - Control of management system information"
+      - "§8.7 - Corrective actions"
+      - "§8.8 - Internal audits"
+    references:
+      - "ISO/IEC 17025:2017"
+
+  - id: "fda-21-cfr-11"
+    name: "21 CFR Part 11 - Electronic Records and Electronic Signatures"
+    mandatory_sections:
+      - "§11.10 - Controls for closed systems"
+      - "§11.10(a) - System validation"
+      - "§11.10(e) - Audit trails"
+      - "§11.10(k) - Authority checks"
+    references:
+      - "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?CFRPart=11"
+
+  - id: "oecd-glp"
+    name: "OECD Principles of Good Laboratory Practice"
+    mandatory_sections:
+      - "Test facility organization and personnel"
+      - "Quality assurance programme"
+      - "Facilities"
+      - "Equipment, materials and reagents"
+      - "Test systems"
+      - "Test and reference items"
+      - "Standard operating procedures"
+      - "Performance of the study"
+      - "Reporting of study results"
+      - "Storage and retention of records and materials"
+    references:
+      - "OECD Series on Principles of Good Laboratory Practice and Compliance Monitoring"
+
+# Risk level overrides
+risk_overrides:
+  HIGH:
+    coverage_threshold: 90
+    required_tiers: [IQ, OQ, PQ]
+    signing_required: true
+    review_required: true
+    mpa_required: true
+    additional_requirements:
+      - "Full equipment qualification (IQ/OQ/PQ) per §6.4"
+      - "Method validation per ISO 17025 §7.2"
+      - "Measurement uncertainty estimation"
+      - "Complete raw data traceability"
+      - "Calibration certificate management"
+
+  MEDIUM:
+    coverage_threshold: 80
+    required_tiers: [OQ, PQ]
+    signing_required: true
+    review_required: true
+    mpa_required: false
+    additional_requirements:
+      - "Equipment qualification (OQ/PQ)"
+      - "Method verification"
+      - "Calibration tracking"
+      - "Standard operating procedures"
+
+  LOW:
+    coverage_threshold: 65
+    required_tiers: [OQ]
+    signing_required: false
+    review_required: false
+    mpa_required: false
+    additional_requirements:
+      - "Basic operational qualification"
+      - "Simple method validation"
+
+# Additional gate checks specific to this profile
+additional_gates:
+  pre_commit:
+    - id: "raw-data-integrity"
+      description: "Verify raw data integrity per 21 CFR 58.130(e)"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp raw-data --verify {changed_files}"
+
+    - id: "calculation-verification"
+      description: "Verify calculation accuracy and audit trail"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp calculations --verify {changed_files}"
+
+  pre_merge:
+    - id: "equipment-records"
+      description: "Verify equipment records per ISO 17025 §6.4.13"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "test -f .gxp/equipment/records.json"
+
+    - id: "method-validation"
+      description: "Verify analytical method validation documentation per ISO 17025 §7.2"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "test -f .gxp/methods/validation.md"
+
+    - id: "sop-compliance"
+      description: "Verify compliance with Standard Operating Procedures"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp sop --verify"
+
+  pre_release:
+    - id: "calibration-status"
+      description: "Verify all equipment calibration is current"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp calibration --check-status"
+
+    - id: "metrological-traceability"
+      description: "Verify metrological traceability per ISO 17025 §6.5"
+      applies_to: [HIGH]
+      check_command: "gxp traceability --report metrological"
+
+    - id: "uncertainty-estimation"
+      description: "Verify measurement uncertainty estimation"
+      applies_to: [HIGH]
+      check_command: "test -f .gxp/uncertainty/analysis.md"
+
+    - id: "glp-compliance"
+      description: "Generate GLP compliance report per 21 CFR 58"
+      applies_to: [HIGH, MEDIUM]
+      check_command: "gxp validate --profile laboratory --report glp"
+
+# ALCOA+ enforcement settings
+alcoa_overrides:
+  attributable:
+    enforce: strict
+    method: "electronic_signature"
+    additional_notes: "Per 21 CFR 58.130(e) - all data must be attributable to analyst"
+
+  legible:
+    enforce: strict
+    method: "human_readable_export"
+    additional_notes: "Raw data must be legible and understandable per 21 CFR 58.190"
+
+  contemporaneous:
+    enforce: strict
+    method: "timestamp_on_entry"
+    additional_notes: "Data recorded at time of observation per GLP principles"
+
+  original:
+    enforce: strict
+    method: "immutable_records"
+    additional_notes: "Original raw data must be preserved per 21 CFR 58.190"
+
+  accurate:
+    enforce: strict
+    method: "automated_validation"
+    additional_notes: "Data accuracy verified through method validation per ISO 17025 §7.2"
+
+  complete:
+    enforce: strict
+    method: "full_context_capture"
+    additional_notes: "Complete context including equipment, reagents, conditions per 21 CFR 58.130"
+
+  consistent:
+    enforce: strict
+    method: "standardized_units"
+    additional_notes: "Consistent units and formats per ISO 17025 §7.8"
+
+  enduring:
+    enforce: strict
+    method: "long_term_retention"
+    additional_notes: "Retention per 21 CFR 58.195 and study-specific requirements"
+
+  available:
+    enforce: strict
+    method: "accessible_archives"
+    additional_notes: "Available for inspection per 21 CFR 58.190"
+
+# Profile-specific configuration
+configuration:
+  # Laboratory-specific settings
+  laboratory:
+    equipment_qualification_required: true
+    calibration_management_required: true
+    reagent_tracking_required: true
+    environmental_monitoring_required: true
+    chain_of_custody_tracking: true
+
+  # Quality assurance
+  quality_assurance:
+    qa_unit_independent: true  # Per 21 CFR 58.35
+    qa_inspection_frequency: "per_protocol"
+    qa_audit_trail_review: true
+    deviation_tracking_required: true
+
+  # Method management
+  methods:
+    method_validation_required: true  # Per ISO 17025 §7.2
+    method_verification_on_change: true
+    measurement_uncertainty_required: true
+    proficiency_testing_tracking: true
+
+  # Equipment management
+  equipment:
+    qualification_lifecycle: true  # IQ/OQ/PQ
+    calibration_scheduling: true
+    maintenance_tracking: true
+    equipment_logs_required: true
+    out_of_specification_handling: true
+
+  # Data integrity
+  data_integrity:
+    raw_data_protection: true
+    calculated_data_verification: true
+    electronic_notebook_integration: true
+    chromatography_data_integrity: true  # Per FDA guidance
+    spectroscopy_data_integrity: true
+
+  # Compliance
+  compliance:
+    standard_operating_procedures_required: true
+    training_records_required: true
+    study_protocol_required: false  # Only for GLP studies
+    final_report_format_defined: true
+
+  # Records retention per 21 CFR 58.195
+  retention:
+    raw_data_retention_years: 2  # Minimum, often longer
+    final_report_retention_years: 5  # Minimum
+    equipment_records_retention_years: 5
+    calibration_records_retention_years: 5

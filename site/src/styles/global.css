@@ -1,0 +1,166 @@
+@import "tailwindcss";
+
+@theme {
+  /* Pharmaceutical teal/blue palette */
+  --color-gxp-50: #f0fdfa;
+  --color-gxp-100: #ccfbf1;
+  --color-gxp-200: #99f6e4;
+  --color-gxp-300: #5eead4;
+  --color-gxp-400: #2dd4bf;
+  --color-gxp-500: #14b8a6;
+  --color-gxp-600: #0d9488;
+  --color-gxp-700: #0f766e;
+  --color-gxp-800: #115e59;
+  --color-gxp-900: #134e4a;
+  --color-gxp-950: #042f2e;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', monospace;
+}
+
+/* Base styles */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-slate-800);
+  background: white;
+  line-height: 1.7;
+}
+
+/* Code blocks */
+pre {
+  border-radius: 0.5rem;
+  border: 1px solid var(--color-slate-200);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+:not(pre) > code {
+  background: var(--color-slate-100);
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+  color: var(--color-gxp-800);
+  font-size: 0.85em;
+}
+
+/* Spec content styles */
+.spec-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 3rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-slate-200);
+  color: var(--color-slate-900);
+}
+
+.spec-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  color: var(--color-slate-800);
+}
+
+.spec-content h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  color: var(--color-slate-700);
+}
+
+.spec-content p {
+  margin-bottom: 1rem;
+}
+
+.spec-content ul, .spec-content ol {
+  margin-bottom: 1rem;
+  padding-left: 1.5rem;
+}
+
+.spec-content li {
+  margin-bottom: 0.25rem;
+}
+
+.spec-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.spec-content th {
+  background: var(--color-slate-50);
+  border: 1px solid var(--color-slate-200);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-slate-700);
+}
+
+.spec-content td {
+  border: 1px solid var(--color-slate-200);
+  padding: 0.5rem 0.75rem;
+}
+
+.spec-content blockquote {
+  border-left: 3px solid var(--color-gxp-500);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--color-slate-600);
+  font-style: italic;
+}
+
+/* RFC 2119 keyword highlighting */
+.spec-content strong {
+  font-weight: 700;
+}
+
+/* Details/Summary for collapsible sections */
+details {
+  border: 1px solid var(--color-slate-200);
+  border-radius: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+details summary {
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--color-slate-700);
+  background: var(--color-slate-50);
+  border-radius: 0.5rem;
+}
+
+details[open] summary {
+  border-bottom: 1px solid var(--color-slate-200);
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+details > :not(summary) {
+  padding: 1rem;
+}

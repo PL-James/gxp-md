@@ -1,0 +1,203 @@
+---
+import Base from '../layouts/Base.astro';
+import SpecTOC from '../components/SpecTOC.astro';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
+const specPath = join(process.cwd(), '..', 'spec', 'GxP.MD');
+const rawSpec = await readFile(specPath, 'utf-8');
+
+// Find the closing --- of YAML frontmatter
+const firstIdx = rawSpec.indexOf('---');
+let closingIdx = rawSpec.indexOf('\n---\n', firstIdx + 3);
+if (closingIdx === -1) {
+  closingIdx = rawSpec.indexOf('\n---', firstIdx + 3);
+}
+
+const yamlFrontmatter = rawSpec.substring(firstIdx + 3, closingIdx).trim();
+const markdownBody = rawSpec.substring(closingIdx + 4).trim();
+
+// Simple markdown-to-HTML conversion for the spec body
+function mdToHtml(md: string): string {
+  let html = md;
+
+  // Code blocks
+  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_m, lang, code) {
+    return '<pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-lg border border-slate-800"><code>' + escapeHtml(code.trim()) + '</code></pre>';
+  });
+
+  // Headers with IDs
+  html = html.replace(/^#### (.+)$/gm, function(_m, text) {
+    const id = makeId(text);
+    return '<h4 id="' + id + '">' + processInline(text) + '</h4>';
+  });
+  html = html.replace(/^### (.+)$/gm, function(_m, text) {
+    const id = makeId(text);
+    return '<h3 id="' + id + '">' + processInline(text) + '</h3>';
+  });
+  html = html.replace(/^## (.+)$/gm, function(_m, text) {
+    const id = makeId(text);
+    return '<h2 id="' + id + '">' + processInline(text) + '</h2>';
+  });
+
+  // Bold
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+  // Inline code
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+  // Italic
+  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+  // Unordered lists
+  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/(<li>[\s\S]*?<\/li>)/g, function(block) {
+    if (!block.startsWith('<ul>')) {
+      return '<ul>' + block + '</ul>';
+    }
+    return block;
+  });
+  // Merge consecutive <ul> blocks
+  html = html.replace(/<\/ul>\s*<ul>/g, '');
+
+  // Ordered lists
+  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+  // Paragraphs - wrap non-tag lines
+  const lines = html.split('\n');
+  const result: string[] = [];
+  let inParagraph = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed === '') {
+      if (inParagraph) {
+        result.push('</p>');
+        inParagraph = false;
+      }
+      continue;
+    }
+    if (trimmed.startsWith('<h') || trimmed.startsWith('<pre') || trimmed.startsWith('<ul') || trimmed.startsWith('<ol') || trimmed.startsWith('<li') || trimmed.startsWith('<table') || trimmed.startsWith('</')) {
+      if (inParagraph) {
+        result.push('</p>');
+        inParagraph = false;
+      }
+      result.push(line);
+      continue;
+    }
+    if (!inParagraph) {
+      result.push('<p>' + line);
+      inParagraph = true;
+    } else {
+      result.push(line);
+    }
+  }
+  if (inParagraph) result.push('</p>');
+
+  return result.join('\n');
+}
+
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function makeId(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+}
+
+function processInline(text: string): string {
+  return text.replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+const htmlContent = mdToHtml(markdownBody);
+
+const tocItems = [
+  { id: 'abstract', label: 'Abstract' },
+  { id: '1-core-principles', label: '1. Core Principles', children: [
+    { id: '11-the-v-model-is-law', label: '1.1 V-Model is Law' },
+    { id: '12-traceability-is-mandatory', label: '1.2 Traceability' },
+    { id: '13-risk-awareness', label: '1.3 Risk Awareness' },
+    { id: '14-evidence-over-assurance', label: '1.4 Evidence' },
+  ]},
+  { id: '2-agent-behavior-by-risk-level', label: '2. Agent Behavior', children: [
+    { id: '21-high-risk-components', label: '2.1 HIGH Risk' },
+    { id: '22-medium-risk-components', label: '2.2 MEDIUM Risk' },
+    { id: '23-low-risk-components', label: '2.3 LOW Risk' },
+  ]},
+  { id: '3-development-rules', label: '3. Development Rules' },
+  { id: '4-documentation-rules', label: '4. Documentation Rules' },
+  { id: '5-testing-rules', label: '5. Testing Rules' },
+  { id: '6-data-integrity--alcoa-compliance', label: '6. ALCOA+ Compliance' },
+  { id: '7-quality-gate-checklists', label: '7. Quality Gates' },
+  { id: '8-repository-structure', label: '8. Repository Structure' },
+  { id: '9-appendix-a-regulatory-profile-reference', label: '9. Profiles' },
+  { id: '10-appendix-b-custom-directives', label: '10. Custom Directives' },
+  { id: '11-appendix-c-glossary', label: '11. Glossary' },
+  { id: '12-appendix-d-conformance', label: '12. Conformance' },
+];
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "GxP.MD Specification v1.0.0",
+  "description": "The complete GxP.MD specification for AI coding agents in regulated industries.",
+  "author": { "@type": "Organization", "name": "PharmaLedger Association" },
+  "datePublished": "2026-02-07",
+  "version": "1.0.0"
+};
+---
+
+<Base
+  title="Specification v1.0.0 — GxP.MD"
+  description="The complete GxP.MD specification. Defines YAML frontmatter schema, agent behavioral directives, V-Model traceability, risk-proportionate enforcement, and ALCOA+ data integrity rules."
+  type="article"
+  keywords="GxP.MD specification, GxP compliance standard, AI agent compliance, V-Model validation, ALCOA+ data integrity"
+  jsonLd={jsonLd}
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div class="mb-12">
+      <div class="flex items-center gap-3 mb-4">
+        <h1 class="text-4xl font-bold text-slate-900">Specification</h1>
+        <span class="bg-gxp-100 text-gxp-800 text-sm font-mono font-medium px-2.5 py-0.5 rounded">v1.0.0</span>
+      </div>
+      <p class="text-lg text-slate-600 max-w-2xl mb-6">
+        The complete GxP.MD specification. This document defines the compliance instruction standard for AI coding agents in regulated industries.
+      </p>
+      <div class="flex flex-wrap gap-3">
+        <a
+          href="https://raw.githubusercontent.com/PL-James/gxp-md/main/spec/GxP.MD"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gxp-700 bg-gxp-50 hover:bg-gxp-100 rounded-md transition-colors border border-gxp-200"
+        >
+          Download Raw GxP.MD
+        </a>
+        <a
+          href="https://raw.githubusercontent.com/PL-James/gxp-md/main/spec/schema/v1.json"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-slate-600 bg-slate-50 hover:bg-slate-100 rounded-md transition-colors border border-slate-200"
+        >
+          JSON Schema
+        </a>
+      </div>
+    </div>
+
+    <div class="flex gap-12">
+      <aside class="hidden lg:block w-64 shrink-0">
+        <SpecTOC items={tocItems} />
+      </aside>
+
+      <div class="flex-1 min-w-0">
+        <section class="mb-12">
+          <details class="border border-slate-200 rounded-lg">
+            <summary class="px-4 py-3 cursor-pointer font-semibold text-slate-700 bg-slate-50 rounded-lg text-sm">
+              YAML Frontmatter (machine-readable configuration)
+            </summary>
+            <pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-b-lg m-0 border-none"><code>{yamlFrontmatter}</code></pre>
+          </details>
+        </section>
+
+        <div class="spec-content max-w-none">
+          <Fragment set:html={htmlContent} />
+        </div>
+      </div>
+    </div>
+  </div>
+</Base>

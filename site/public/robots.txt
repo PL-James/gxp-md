@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://gxp.md/sitemap-index.xml

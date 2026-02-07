@@ -1,0 +1,38 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="border-t border-slate-200 bg-slate-50 mt-24">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div>
+        <span class="font-mono font-bold text-lg text-slate-900">GxP<span class="text-gxp-600">.MD</span></span>
+        <p class="mt-2 text-sm text-slate-500">
+          GxP compliance instructions for AI-native development.
+        </p>
+      </div>
+      <div>
+        <h3 class="font-semibold text-sm text-slate-700 mb-3">Documentation</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="/spec" class="text-slate-500 hover:text-gxp-700 transition-colors">Specification</a></li>
+          <li><a href="/getting-started" class="text-slate-500 hover:text-gxp-700 transition-colors">Getting Started</a></li>
+          <li><a href="/templates" class="text-slate-500 hover:text-gxp-700 transition-colors">Templates</a></li>
+          <li><a href="/profiles" class="text-slate-500 hover:text-gxp-700 transition-colors">Regulatory Profiles</a></li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="font-semibold text-sm text-slate-700 mb-3">Ecosystem</h3>
+        <ul class="space-y-2 text-sm">
+          <li><a href="https://github.com/PL-James/gxp-md" class="text-slate-500 hover:text-gxp-700 transition-colors" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+          <li><a href="https://github.com/PL-James/ROSIE" class="text-slate-500 hover:text-gxp-700 transition-colors" target="_blank" rel="noopener noreferrer">ROSIE RFC-001</a></li>
+          <li><a href="https://github.com/PL-James/nexus" class="text-slate-500 hover:text-gxp-700 transition-colors" target="_blank" rel="noopener noreferrer">Nexus Platform</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="mt-8 pt-8 border-t border-slate-200">
+      <p class="text-sm text-slate-400 text-center">
+        &copy; {year} PharmaLedger Association. GxP.MD Specification v1.0.0
+      </p>
+    </div>
+  </div>
+</footer>

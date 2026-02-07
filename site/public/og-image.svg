@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#0f172a"/>
+  <rect x="0" y="0" width="1200" height="4" fill="#0f766e"/>
+  <text x="100" y="240" font-family="monospace" font-size="72" font-weight="bold" fill="white">GxP<tspan fill="#14b8a6">.MD</tspan></text>
+  <text x="100" y="320" font-family="sans-serif" font-size="32" fill="#94a3b8">GxP compliance instructions</text>
+  <text x="100" y="370" font-family="sans-serif" font-size="32" fill="#94a3b8">for AI coding agents</text>
+  <text x="100" y="460" font-family="monospace" font-size="20" fill="#64748b">v1.0.0 — Open Standard</text>
+  <text x="100" y="530" font-family="sans-serif" font-size="18" fill="#475569">PharmaLedger Association</text>
+</svg>

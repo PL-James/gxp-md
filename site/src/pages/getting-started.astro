@@ -1,0 +1,206 @@
+---
+import Base from '../layouts/Base.astro';
+import CopyButton from '../components/CopyButton.astro';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'TechArticle',
+  headline: 'Getting Started with GxP.MD',
+  description: 'Step-by-step guide to adding GxP.MD compliance instructions to your AI-assisted development project.',
+  author: { '@type': 'Organization', name: 'PharmaLedger Association' },
+  datePublished: '2026-02-07',
+};
+
+const minimalGxpMd = `---
+gxpmd_version: "1.0.0"
+
+project:
+  name: "My Project"
+  version: "0.1.0"
+
+regulatory:
+  profile: pharma-standard
+  frameworks: ["21 CFR Part 11"]
+
+risk:
+  overall: MEDIUM
+
+artifacts:
+  engine: rosie
+  directory: .gxp
+
+agent:
+  mode: risk_proportionate
+---
+
+# Core Principles
+
+The V-Model is law. Never write code without
+a corresponding User Story and Tech Spec.`;
+---
+
+<Base
+  title="Getting Started — GxP.MD"
+  description="Step-by-step guide to adding GxP.MD compliance instructions to your AI-assisted development project. Create a GxP.MD file, choose a profile, and start developing."
+  type="article"
+  jsonLd={jsonLd}
+>
+  <article class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <h1 class="text-4xl font-bold text-slate-900 mb-4">Getting Started</h1>
+    <p class="text-lg text-slate-600 mb-12">Add GxP.MD compliance to your project in four steps.</p>
+
+    <!-- Step 1 -->
+    <section class="mb-16">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-8 h-8 rounded-full bg-gxp-100 text-gxp-800 font-bold text-sm flex items-center justify-center">1</span>
+        <h2 class="text-2xl font-bold text-slate-900">Create a GxP.MD file</h2>
+      </div>
+      <p class="text-slate-600 mb-6">
+        Create a file named <code>GxP.MD</code> at your project root. This is the compliance contract your AI agent reads.
+      </p>
+      <div class="rounded-lg border border-slate-200 overflow-hidden mb-4">
+        <div class="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
+          <span class="font-mono text-sm text-slate-600">GxP.MD</span>
+          <CopyButton text={minimalGxpMd} />
+        </div>
+        <pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-none border-none m-0"><code>{minimalGxpMd}</code></pre>
+      </div>
+      <p class="text-sm text-slate-500">
+        Download the full starter template from the <a href="/templates" class="text-gxp-700 hover:underline">Templates</a> page for all available configuration options.
+      </p>
+    </section>
+
+    <!-- Step 2 -->
+    <section class="mb-16">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-8 h-8 rounded-full bg-gxp-100 text-gxp-800 font-bold text-sm flex items-center justify-center">2</span>
+        <h2 class="text-2xl font-bold text-slate-900">Choose a regulatory profile</h2>
+      </div>
+      <p class="text-slate-600 mb-6">
+        Set the <code>regulatory.profile</code> field to match your industry and regulatory requirements.
+      </p>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm border-collapse">
+          <thead>
+            <tr>
+              <th class="bg-slate-50 border border-slate-200 px-4 py-2 text-left font-semibold text-slate-700">Profile</th>
+              <th class="bg-slate-50 border border-slate-200 px-4 py-2 text-left font-semibold text-slate-700">Use When</th>
+              <th class="bg-slate-50 border border-slate-200 px-4 py-2 text-left font-semibold text-slate-700">Key Standards</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2"><code>pharma-standard</code></td>
+              <td class="border border-slate-200 px-4 py-2">Pharma manufacturing, distribution, quality systems</td>
+              <td class="border border-slate-200 px-4 py-2">21 CFR Part 11, EU Annex 11, GAMP 5</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2"><code>medical-device</code></td>
+              <td class="border border-slate-200 px-4 py-2">Medical device software, IVDs</td>
+              <td class="border border-slate-200 px-4 py-2">IEC 62304, ISO 13485, 21 CFR 820</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2"><code>clinical-trial</code></td>
+              <td class="border border-slate-200 px-4 py-2">Clinical trial data systems, eCRF, CTMS</td>
+              <td class="border border-slate-200 px-4 py-2">ICH E6(R2), GDPR, 21 CFR Part 11</td>
+            </tr>
+            <tr>
+              <td class="border border-slate-200 px-4 py-2"><code>laboratory</code></td>
+              <td class="border border-slate-200 px-4 py-2">LIMS, testing and calibration systems</td>
+              <td class="border border-slate-200 px-4 py-2">21 CFR Part 58, ISO 17025</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="mt-4 text-sm text-slate-500">
+        See the <a href="/profiles" class="text-gxp-700 hover:underline">Profiles</a> page for a detailed comparison of what each profile requires.
+      </p>
+    </section>
+
+    <!-- Step 3 -->
+    <section class="mb-16">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-8 h-8 rounded-full bg-gxp-100 text-gxp-800 font-bold text-sm flex items-center justify-center">3</span>
+        <h2 class="text-2xl font-bold text-slate-900">Initialize the .gxp/ directory</h2>
+      </div>
+      <p class="text-slate-600 mb-6">
+        Create the artifact directory structure. This is where your V-Model documentation lives.
+      </p>
+      <div class="rounded-lg border border-slate-200 overflow-hidden mb-4">
+        <div class="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
+          <span class="font-mono text-sm text-slate-600">Terminal</span>
+        </div>
+        <pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-none border-none m-0"><code>mkdir -p .gxp/requirements .gxp/user_stories .gxp/specs .gxp/evidence .gxp/adr</code></pre>
+      </div>
+      <p class="text-slate-600 mb-4">Then create the apex document — <code>.gxp/system_context.md</code>:</p>
+      <div class="rounded-lg border border-slate-200 overflow-hidden">
+        <div class="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
+          <span class="font-mono text-sm text-slate-600">.gxp/system_context.md</span>
+        </div>
+        <pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-none border-none m-0"><code>{`---
+id: "your-uuid-here"
+project_name: "My Project"
+version: "0.1.0"
+gxp_risk_rating: MEDIUM
+validation_status: DRAFT
+intended_use: "Describe the system's intended use"
+---
+
+# System Context
+
+Describe the system boundary, architecture,
+and regulatory scope here.`}</code></pre>
+      </div>
+      <p class="mt-4 text-sm text-slate-500">
+        Download artifact templates from the <a href="/templates" class="text-gxp-700 hover:underline">Templates</a> page.
+      </p>
+    </section>
+
+    <!-- Step 4 -->
+    <section class="mb-16">
+      <div class="flex items-center gap-3 mb-4">
+        <span class="w-8 h-8 rounded-full bg-gxp-100 text-gxp-800 font-bold text-sm flex items-center justify-center">4</span>
+        <h2 class="text-2xl font-bold text-slate-900">Start developing</h2>
+      </div>
+      <p class="text-slate-600 mb-6">
+        Your AI agent will now read the <code>GxP.MD</code> file at session start and follow the compliance directives automatically. The agent will:
+      </p>
+      <ul class="space-y-3 text-slate-600">
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span>Read <code>.gxp/system_context.md</code> to understand the system boundary and risk rating</span>
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span>Create requirements, user stories, and specifications before writing code</span>
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span>Maintain traceability links between all artifacts</span>
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span>Tag tests with GxP annotations (<code>@gxp-tag</code>, <code>@trace</code>, <code>@test-type</code>)</span>
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span>Generate signed evidence packages for verification</span>
+        </li>
+        <li class="flex items-start gap-3">
+          <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+          <span>Enforce quality gates before commits and merges</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Next Steps -->
+    <section class="rounded-lg bg-gxp-50 border border-gxp-200 p-8">
+      <h2 class="text-xl font-bold text-gxp-900 mb-4">Next Steps</h2>
+      <ul class="space-y-2 text-gxp-800">
+        <li><a href="/spec" class="hover:underline font-medium">Read the full specification</a> — understand every directive and configuration option</li>
+        <li><a href="/profiles" class="hover:underline font-medium">Compare regulatory profiles</a> — see which standards each profile enforces</li>
+        <li><a href="/templates" class="hover:underline font-medium">Download templates</a> — get pre-built artifact templates for your .gxp/ directory</li>
+      </ul>
+    </section>
+  </article>
+</Base>

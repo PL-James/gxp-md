@@ -1,0 +1,169 @@
+---
+import Base from '../layouts/Base.astro';
+import Hero from '../components/Hero.astro';
+import ProfileCard from '../components/ProfileCard.astro';
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'GxP.MD',
+  url: 'https://gxp.md',
+  description: 'GxP compliance instructions for AI coding agents. A markdown-based compliance instruction standard for AI-assisted software development in regulated industries.',
+  publisher: {
+    '@type': 'Organization',
+    name: 'PharmaLedger Association',
+  },
+};
+---
+
+<Base
+  title="GxP.MD — GxP Compliance for AI-Native Development"
+  description="Drop a GxP.MD file in your project root. Your AI agent handles GxP compliance — V-Model traceability, risk-proportionate enforcement, and ALCOA+ data integrity."
+  jsonLd={jsonLd}
+>
+  <Hero />
+
+  <!-- What is GxP.MD? -->
+  <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <div class="max-w-3xl">
+      <h2 class="text-3xl font-bold text-slate-900 mb-4">What is GxP.MD?</h2>
+      <p class="text-lg text-slate-600 leading-relaxed mb-6">
+        AI coding agents have no built-in understanding of GxP compliance. When they generate code for pharmaceutical
+        or life sciences projects, they optimize for functionality — not regulatory compliance.
+      </p>
+      <p class="text-lg text-slate-600 leading-relaxed mb-6">
+        <strong class="text-slate-800">GxP.MD</strong> is a portable, agent-agnostic instruction standard. Like
+        <code>CLAUDE.md</code> or <code>.cursorrules</code> but for GxP. The name is a deliberate pun:
+        <code>gxp.md</code> is both this website <em>and</em> evokes the markdown file format.
+      </p>
+      <p class="text-lg text-slate-600 leading-relaxed">
+        Place a single <code>GxP.MD</code> file at your project root. Your AI agent — whether Claude, GPT, Gemini,
+        or Copilot — reads it and knows how to produce compliant code, maintain traceability, generate evidence,
+        and enforce quality gates.
+      </p>
+    </div>
+  </section>
+
+  <!-- Value Props -->
+  <section class="bg-slate-50 py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="text-3xl font-bold text-slate-900 mb-12 text-center">Why GxP.MD?</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div>
+          <div class="w-10 h-10 rounded-lg bg-gxp-100 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+          </div>
+          <h3 class="font-semibold text-slate-900 mb-2">Portable</h3>
+          <p class="text-sm text-slate-600">Single file at project root. No tooling required. Works with any AI agent that reads project files.</p>
+        </div>
+        <div>
+          <div class="w-10 h-10 rounded-lg bg-gxp-100 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+          </div>
+          <h3 class="font-semibold text-slate-900 mb-2">Agent-Agnostic</h3>
+          <p class="text-sm text-slate-600">Works with Claude, GPT, Gemini, Copilot, and any future AI coding assistant. No vendor lock-in.</p>
+        </div>
+        <div>
+          <div class="w-10 h-10 rounded-lg bg-gxp-100 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+          </div>
+          <h3 class="font-semibold text-slate-900 mb-2">Risk-Proportionate</h3>
+          <p class="text-sm text-slate-600">Not binary pass/fail. Enforcement scales with risk: HIGH demands full rigor, LOW stays lightweight.</p>
+        </div>
+        <div>
+          <div class="w-10 h-10 rounded-lg bg-gxp-100 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+          </div>
+          <h3 class="font-semibold text-slate-900 mb-2">Evidence-Based</h3>
+          <p class="text-sm text-slate-600">Cryptographically signed evidence packages. ALCOA+ data integrity. Verification over assurance.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ecosystem -->
+  <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+    <h2 class="text-3xl font-bold text-slate-900 mb-4">Ecosystem</h2>
+    <p class="text-lg text-slate-600 mb-12 max-w-2xl">
+      GxP.MD is part of a broader compliance ecosystem for AI-assisted pharmaceutical software development.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="rounded-lg border border-gxp-200 bg-gxp-50/50 p-6">
+        <div class="font-mono font-bold text-gxp-800 mb-2">GxP.MD</div>
+        <p class="text-sm text-slate-600 mb-3">The declarative contract. Defines what compliance means for a project. Lives at project root.</p>
+        <span class="text-xs bg-gxp-100 text-gxp-700 px-2 py-0.5 rounded font-medium">Instruction Layer</span>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-6">
+        <div class="font-mono font-bold text-slate-800 mb-2">ROSIE RFC-001</div>
+        <p class="text-sm text-slate-600 mb-3">The artifact standard. Defines how compliance evidence is structured, stored, and signed.</p>
+        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">Evidence Layer</span>
+      </div>
+      <div class="rounded-lg border border-slate-200 p-6">
+        <div class="font-mono font-bold text-slate-800 mb-2">Nexus</div>
+        <p class="text-sm text-slate-600 mb-3">The validation platform. Consumes GxP.MD contracts and ROSIE artifacts to assess compliance state.</p>
+        <span class="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded font-medium">Platform Layer</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Regulatory Profiles -->
+  <section class="bg-slate-50 py-20">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <h2 class="text-3xl font-bold text-slate-900 mb-4">Built-in Regulatory Profiles</h2>
+      <p class="text-lg text-slate-600 mb-10 max-w-2xl">
+        Pre-configured compliance settings for common pharmaceutical and life sciences regulatory frameworks.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <ProfileCard
+          name="pharma-standard"
+          title="Pharmaceutical Standard"
+          description="Comprehensive profile for pharmaceutical manufacturing and distribution systems."
+          standards={["21 CFR Part 11", "EU Annex 11", "ICH Q7/Q9/Q10", "GAMP 5"]}
+          riskDefault="HIGH"
+        />
+        <ProfileCard
+          name="medical-device"
+          title="Medical Device"
+          description="For medical device software lifecycle management and quality systems."
+          standards={["IEC 62304", "ISO 13485", "FDA 21 CFR 820"]}
+          riskDefault="HIGH"
+        />
+        <ProfileCard
+          name="clinical-trial"
+          title="Clinical Trial"
+          description="Clinical trial systems with patient data protection and GCP compliance."
+          standards={["ICH E6(R2)", "21 CFR Part 11", "GDPR"]}
+          riskDefault="HIGH"
+        />
+        <ProfileCard
+          name="laboratory"
+          title="Laboratory"
+          description="Good Laboratory Practice for testing and calibration systems."
+          standards={["21 CFR Part 58", "ISO 17025"]}
+          riskDefault="MEDIUM"
+        />
+      </div>
+      <div class="mt-8 text-center">
+        <a href="/profiles" class="text-gxp-700 hover:text-gxp-800 font-medium text-sm transition-colors">
+          Compare profiles in detail →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+    <h2 class="text-3xl font-bold text-slate-900 mb-4">Get Started in 5 Minutes</h2>
+    <p class="text-lg text-slate-600 mb-8 max-w-xl mx-auto">
+      Download the starter template, choose a regulatory profile, and drop it in your project root.
+    </p>
+    <div class="flex flex-wrap justify-center gap-4">
+      <a href="/getting-started" class="inline-flex items-center px-6 py-3 rounded-lg bg-gxp-700 text-white font-semibold text-sm hover:bg-gxp-800 transition-colors shadow-sm">
+        Getting Started Guide
+      </a>
+      <a href="/templates" class="inline-flex items-center px-6 py-3 rounded-lg border border-slate-300 text-slate-700 font-semibold text-sm hover:bg-slate-50 transition-colors">
+        Download Templates
+      </a>
+    </div>
+  </section>
+</Base>
