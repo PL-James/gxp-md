@@ -1,0 +1,78 @@
+name: Feature Request
+description: Suggest a new feature or improvement for GxP.MD
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement. Please describe the feature and why it would be valuable.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of GxP.MD would this affect?
+      options:
+        - Specification (spec/GxP.MD)
+        - Harden Tool (tools/gxpmd-harden.py)
+        - Starter Template (templates/GxP.MD.starter)
+        - Microsite (gxp.md website)
+        - Regulatory Profiles (spec/profiles/)
+        - JSON Schema (spec/schema/)
+        - New Tooling
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or Gap
+      description: What problem does this feature solve? What's missing today?
+      placeholder: |
+        When using GxP.MD with [context], I find that...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How would you like this to work?
+      placeholder: |
+        I'd like GxP.MD to...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: regulatory
+    attributes:
+      label: Regulatory Context
+      description: Is this related to a specific regulatory framework?
+      options:
+        - General (all frameworks)
+        - FDA 21 CFR Part 11
+        - EU Annex 11
+        - IEC 62304 (Medical Devices)
+        - ICH E6(R2) (Clinical Trials)
+        - GLP (Laboratory)
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: What alternatives have you considered or tried?
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context, examples, or references.
+    validations:
+      required: false

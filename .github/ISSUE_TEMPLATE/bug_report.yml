@@ -1,0 +1,83 @@
+name: Bug Report
+description: Report a bug in the GxP.MD specification, tooling, or microsite
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please fill out the sections below so we can reproduce and fix it.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of GxP.MD is affected?
+      options:
+        - Specification (spec/GxP.MD)
+        - Harden Tool (tools/gxpmd-harden.py)
+        - Starter Template (templates/GxP.MD.starter)
+        - Microsite (gxp.md website)
+        - Regulatory Profiles (spec/profiles/)
+        - JSON Schema (spec/schema/)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect to happen?
+      placeholder: |
+        **What happened:**
+        ...
+
+        **What I expected:**
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to Reproduce
+      description: How can we reproduce this issue?
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: GxP.MD Version
+      description: Which version of GxP.MD are you using?
+      placeholder: "2.1.0"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: agent
+    attributes:
+      label: AI Agent (if applicable)
+      description: Which AI agent were you using when this occurred?
+      options:
+        - Claude
+        - GPT / ChatGPT
+        - Gemini
+        - GitHub Copilot
+        - Other
+        - Not applicable
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any other context, screenshots, or log output.
+    validations:
+      required: false

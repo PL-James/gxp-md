@@ -1,7 +1,7 @@
 ---
-# GxP.MD v2.0.0 — Annotation-First Compliance for AI Coding Agents
+# GxP.MD v2.1.0 — Annotation-First Compliance for AI Coding Agents
 # Copyright 2026 PharmaLedger Association. All rights reserved.
-gxpmd_version: "2.0.0"
+gxpmd_version: "2.1.0"
 
 project:
   name: ""                    # Human-readable product name
@@ -125,15 +125,15 @@ agent:
 
 # GxP.MD Specification
 
-**Version 2.0.0**
+**Version 2.1.0**
 
 ## Abstract
 
-GxP.MD v2.0.0 is an annotation-first compliance instruction standard for AI coding agents operating on software systems subject to Good Practice (GxP) regulations in the pharmaceutical and life sciences industries.
+GxP.MD v2.1.0 is an annotation-first compliance instruction standard for AI coding agents operating on software systems subject to Good Practice (GxP) regulations in the pharmaceutical and life sciences industries.
 
 A GxP.MD file is a single markdown document placed at the root of a software project. It contains machine-readable configuration in YAML frontmatter and human-readable behavioral directives in the markdown body. AI agents discover this file by convention, parse the configuration to understand the regulatory context, and follow the directives to produce compliant code, annotations, tests, and evidence.
 
-Version 2.0.0 introduces three foundational changes from v1:
+Version 2.0.0 introduced three foundational changes from v1:
 
 1. **Compliance-as-Code.** Traceability lives in structured code annotations during active development, not in a parallel documentation system. Separate artifact files are optional depth for complex or high-risk components.
 2. **Gate Enforcement Over Process Enforcement.** The specification defines what must be true at each quality gate, not how the agent must work. Agents are free to code first and annotate later, or plan first and code later, as long as gates pass.
@@ -415,7 +415,7 @@ For many teams, the ticket, issue, or backlog item combined with the `@trace US-
 **Specifications (`SPEC-NNN-NNN.md`): OPTIONAL for LOW/MEDIUM risk.**
 For HIGH risk components with complex design rationale, a separate `SPEC-NNN-NNN.md` in `.gxp/specs/` adds value by documenting design approach, data flows, security considerations, and API contracts. For simple features at LOW or MEDIUM risk, the annotation description combined with the code itself IS the specification.
 
-**Harden mode generates formal documents from annotations when separate files do not exist.** This ensures the compliance record is always complete at sprint boundaries, regardless of whether the team maintains formal artifact files during development.
+**Harden mode generates stub formal documents from annotations when separate files do not exist** (see Section 4.2, Step 5). Stubs contain the annotation-derived metadata (ID, description, risk level, linked files) and are marked `validation_status: draft`. This ensures the compliance record is always complete at sprint boundaries, regardless of whether the team maintains formal artifact files during development.
 
 ---
 
@@ -581,7 +581,14 @@ For each component in the traceability matrix:
 **Step 4: Evidence Formalization**
 Collect CI test outputs from the current sprint or release cycle. Organize them into evidence packages in `.gxp/evidence/` following the structure defined in Section 4.5. Each evidence package is self-contained and includes metadata, environment snapshot, test output, and manifest.
 
-**Step 5: Gap Analysis**
+**Step 5: Artifact Stub Generation**
+For each requirement and specification discovered through annotations that does NOT have a corresponding formal artifact file in `.gxp/`:
+- Generate a stub `REQ-NNN.md` in `.gxp/requirements/` with the annotation description, risk level, linked specifications, and `validation_status: draft`.
+- Generate a stub `SPEC-NNN-NNN.md` in `.gxp/specs/` with the annotation description, linked source and test files, and `validation_status: draft`.
+
+Stubs are generated only when formal files do not already exist. Existing formal files are never overwritten. Stubs provide the minimum formal artifact record; teams MAY flesh them out with additional detail for HIGH risk components.
+
+**Step 6: Gap Analysis**
 Identify and report:
 - Missing annotations (GxP-relevant code without annotations).
 - Incomplete traceability chains (a REQ with no corresponding SPEC, a SPEC with no corresponding test).
@@ -589,7 +596,7 @@ Identify and report:
 - Missing evidence (test results that were not captured or formalized).
 - Stale annotations (annotations referencing deleted or renamed artifacts).
 
-**Step 6: Compliance Status Report**
+**Step 7: Compliance Status Report**
 Generate `.gxp/compliance-status.md` (format defined in Section 4.4) summarizing the compliance state.
 
 ### 4.3 Traceability Matrix Format
@@ -598,7 +605,7 @@ The traceability matrix is generated during harden mode and stored at `.gxp/trac
 
 ```json
 {
-  "gxpmd_version": "2.0.0",
+  "gxpmd_version": "2.1.0",
   "generated_at": "2026-02-07T14:30:00Z",
   "sprint": "2026-S03",
   "summary": {
@@ -798,6 +805,16 @@ Assign risk levels based on the impact of component failure:
 - **LOW**: Utilities, formatting, configuration, UI presentation, developer tooling, logging — failure causes inconvenience, not data integrity or safety issues.
 
 When uncertain, classify one level higher and consult the human operator. Risk levels MUST NOT be changed without human authorization.
+
+#### Flagging Risk Disagreements
+
+If the agent believes an existing risk classification is incorrect (e.g., a component classified as MEDIUM should be HIGH due to newly discovered data flows), the agent MUST NOT unilaterally change the `@gxp-risk` tag. Instead:
+
+1. **Add a concern tag** in the source file: `// @gxp-risk-concern "Recommend HIGH — handles PHI data flow"`. The `@gxp-risk-concern` tag is informational and does not affect gate enforcement.
+2. **Log the concern** in `.gxp/risk_assessment.log` with status `review_requested` and a detailed rationale.
+3. **Report to the human operator** with the rationale for reclassification.
+
+The human operator reviews the concern and either upgrades the risk level (which the agent then applies) or acknowledges the current classification with a documented justification.
 
 ### 5.2 HIGH Risk Components
 
@@ -1362,4 +1379,4 @@ Existing formal artifact files are NOT invalidated by v2. They are incorporated 
 
 ---
 
-*End of GxP.MD Specification v2.0.0*
+*End of GxP.MD Specification v2.1.0*

@@ -2,7 +2,7 @@
 """
 gxpmd-harden.py — GxP.MD Compliance Sweep Tool
 
-Executes the harden mode compliance sweep defined in GxP.MD v2.0.0.
+Executes the harden mode compliance sweep defined in GxP.MD v2.1.0.
 Parses annotations from source and test files, builds the traceability
 matrix, validates annotation chains, and generates compliance reports.
 
@@ -15,6 +15,8 @@ Outputs:
     .gxp/traceability-matrix.json
     .gxp/compliance-status.md
     .gxp/gap-analysis.json
+    .gxp/requirements/REQ-NNN.md   (stubs, when formal files don't exist)
+    .gxp/specs/SPEC-NNN-NNN.md     (stubs, when formal files don't exist)
 """
 
 import argparse
@@ -34,6 +36,7 @@ from pathlib import Path
 RE_GXP_REQ = re.compile(r'@gxp-req\s+(REQ-\d{3})(?:\s+"([^"]*)")?')
 RE_GXP_SPEC = re.compile(r'@gxp-spec\s+(SPEC-\d{3}-\d{3})(?:\s+"([^"]*)")?')
 RE_GXP_RISK = re.compile(r'@gxp-risk\s+(HIGH|MEDIUM|LOW)')
+RE_GXP_RISK_CONCERN = re.compile(r'@gxp-risk-concern\s+"([^"]*)"')
 RE_TRACE = re.compile(r'@trace\s+(US-\d{3}-\d{3})')
 RE_TEST_TYPE = re.compile(r'@test-type\s+(IQ|OQ|PQ)')
 
@@ -139,10 +142,11 @@ def parse_annotations(filepath: Path, root: Path) -> dict:
     reqs = RE_GXP_REQ.findall(content)
     specs = RE_GXP_SPEC.findall(content)
     risks = RE_GXP_RISK.findall(content)
+    risk_concerns = RE_GXP_RISK_CONCERN.findall(content)
     traces = RE_TRACE.findall(content)
     test_types = RE_TEST_TYPE.findall(content)
 
-    if not any([reqs, specs, risks, traces, test_types]):
+    if not any([reqs, specs, risks, traces, test_types, risk_concerns]):
         return None
 
     return {
@@ -151,6 +155,7 @@ def parse_annotations(filepath: Path, root: Path) -> dict:
         'requirements': [{'id': r[0], 'desc': r[1]} for r in reqs],
         'specifications': [{'id': s[0], 'desc': s[1]} for s in specs],
         'risk_levels': risks,
+        'risk_concerns': risk_concerns,
         'traces': traces,
         'test_types': test_types,
     }
@@ -519,7 +524,7 @@ def generate_traceability_matrix(traceability: dict, config: dict,
 
     return {
         'generated_at': now,
-        'gxpmd_version': '2.0.0',
+        'gxpmd_version': '2.1.0',
         'project_root': str(project_root),
         'chains': chains_output,
         'summary': {
@@ -533,7 +538,9 @@ def generate_traceability_matrix(traceability: dict, config: dict,
 
 def generate_compliance_status(traceability: dict, validation_issues: list,
                                 orphan_issues: list, coverage_issues: list,
-                                annotations: list, config: dict) -> str:
+                                annotations: list, config: dict,
+                                risk_concerns: list | None = None,
+                                stub_summary: dict | None = None) -> str:
     """Generate .gxp/compliance-status.md report."""
     now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     chains = traceability['chains']
@@ -558,7 +565,7 @@ def generate_compliance_status(traceability: dict, validation_issues: list,
         '# Compliance Status Report',
         '',
         f'Generated: {now}',
-        'GxP.MD Version: 2.0.0',
+        'GxP.MD Version: 2.1.0',
         '',
         '---',
         '',
@@ -623,6 +630,33 @@ def generate_compliance_status(traceability: dict, validation_issues: list,
         lines.append(f'- **Tiers**: {", ".join(chain["tiers_present"]) or "none"}')
         lines.append('')
 
+    # Risk concerns section
+    if risk_concerns:
+        lines.extend([
+            '## Risk Classification Concerns',
+            '',
+            '| File | Current Risk | Concern |',
+            '|------|-------------|---------|',
+        ])
+        for rc in risk_concerns:
+            lines.append(f'| {rc["file"]} | {rc["current_risk"]} | {rc["concern"]} |')
+        lines.append('')
+        lines.append('*These concerns require human review. See `.gxp/risk_assessment.log` for details.*')
+        lines.append('')
+
+    # Artifact stubs section
+    if stub_summary:
+        created = (stub_summary.get('created_requirements', []) +
+                   stub_summary.get('created_specifications', []))
+        if created:
+            lines.extend([
+                '## Generated Artifact Stubs',
+                '',
+            ])
+            for f in created:
+                lines.append(f'- `{f}` (draft — review recommended)')
+            lines.append('')
+
     # Sign-off section
     lines.extend([
         '---',
@@ -649,7 +683,7 @@ def generate_gap_analysis(validation_issues: list, orphan_issues: list,
 
     return {
         'generated_at': now,
-        'gxpmd_version': '2.0.0',
+        'gxpmd_version': '2.1.0',
         'total_issues': len(all_issues),
         'errors': len([i for i in all_issues if i.get('severity') == 'ERROR']),
         'warnings': len([i for i in all_issues if i.get('severity') == 'WARNING']),
@@ -660,12 +694,172 @@ def generate_gap_analysis(validation_issues: list, orphan_issues: list,
 
 
 # ---------------------------------------------------------------------------
+# Artifact stub generation
+# ---------------------------------------------------------------------------
+
+def generate_artifact_stubs(traceability: dict, annotations: list[dict],
+                             config: dict, project_root: Path) -> dict:
+    """Generate stub REQ-NNN.md and SPEC-NNN-NNN.md files for annotations
+    that lack corresponding formal artifact files. Returns summary of actions."""
+    gxp_dir = project_root / config['artifacts_dir']
+    req_dir = gxp_dir / 'requirements'
+    spec_dir = gxp_dir / 'specs'
+    req_dir.mkdir(parents=True, exist_ok=True)
+    spec_dir.mkdir(parents=True, exist_ok=True)
+
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    created_reqs = []
+    created_specs = []
+    skipped = []
+
+    # Collect all requirement descriptions from annotations
+    req_descs = {}
+    req_risks = {}
+    req_specs_map = defaultdict(set)
+    spec_descs = {}
+    spec_sources = defaultdict(list)
+    spec_tests = defaultdict(list)
+
+    for ann in annotations:
+        for r in ann['requirements']:
+            if r['desc']:
+                req_descs[r['id']] = r['desc']
+        for s in ann['specifications']:
+            if s['desc']:
+                spec_descs[s['id']] = s['desc']
+            req_id = _spec_to_req(s['id'])
+            if req_id:
+                req_specs_map[req_id].add(s['id'])
+            if ann['is_test']:
+                spec_tests[s['id']].append(ann['file'])
+            else:
+                spec_sources[s['id']].append(ann['file'])
+        for risk in ann['risk_levels']:
+            for r in ann['requirements']:
+                req_risks[r['id']] = risk
+
+    # Generate requirement stubs
+    for chain in traceability['chains']:
+        req_id = chain['requirement']
+        req_file = req_dir / f'{req_id}.md'
+
+        if req_file.exists():
+            skipped.append(str(req_file.relative_to(project_root)))
+            continue
+
+        desc = req_descs.get(req_id, 'No description available from annotations')
+        risk = chain['risk_level']
+        specs = sorted(chain['specifications'])
+
+        content = (
+            f'---\n'
+            f'gxp_id: {req_id}\n'
+            f'title: "{desc}"\n'
+            f'parent_id: null\n'
+            f'description: "{desc}"\n'
+            f'risk_level: {risk}\n'
+            f'acceptance_criteria:\n'
+            f'  - "TODO: Define acceptance criteria"\n'
+            f'validation_status: draft\n'
+            f'created: "{now}"\n'
+            f'updated: "{now}"\n'
+            f'author: "generated-by-gxpmd-harden"\n'
+            f'---\n\n'
+            f'# {req_id}: {desc}\n\n'
+            f'> This stub was auto-generated by `gxpmd-harden.py` from source annotations.\n'
+            f'> Review and flesh out for HIGH risk components.\n\n'
+            f'## Linked Specifications\n\n'
+        )
+        for sid in specs:
+            content += f'- {sid}\n'
+        content += (
+            f'\n## Regulatory Basis\n\n'
+            f'TODO: Document the regulatory basis for this requirement.\n\n'
+            f'## Risk Justification\n\n'
+            f'Classified as **{risk}** risk.\n'
+            f'TODO: Document impact analysis and risk justification.\n'
+        )
+
+        req_file.write_text(content, encoding='utf-8')
+        created_reqs.append(str(req_file.relative_to(project_root)))
+
+    # Generate specification stubs
+    all_spec_ids = set(traceability['all_spec_ids'])
+    for spec_id in sorted(all_spec_ids):
+        spec_file = spec_dir / f'{spec_id}.md'
+
+        if spec_file.exists():
+            skipped.append(str(spec_file.relative_to(project_root)))
+            continue
+
+        desc = spec_descs.get(spec_id, 'No description available from annotations')
+        us_id = _spec_to_us(spec_id)
+        sources = sorted(set(spec_sources.get(spec_id, [])))
+        tests = sorted(set(spec_tests.get(spec_id, [])))
+
+        content = (
+            f'---\n'
+            f'gxp_id: {spec_id}\n'
+            f'title: "{desc}"\n'
+            f'parent_id: {us_id or "null"}\n'
+            f'verification_tier: OQ\n'
+            f'design_approach: "TODO: Describe implementation approach"\n'
+            f'source_files:\n'
+        )
+        for src in sources:
+            content += f'  - "{src}"\n'
+        if not sources:
+            content += f'  - "TODO: Link source files"\n'
+        content += f'test_files:\n'
+        for tst in tests:
+            content += f'  - "{tst}"\n'
+        if not tests:
+            content += f'  - "TODO: Link test files"\n'
+        content += (
+            f'validation_status: draft\n'
+            f'created: "{now}"\n'
+            f'updated: "{now}"\n'
+            f'author: "generated-by-gxpmd-harden"\n'
+            f'---\n\n'
+            f'# {spec_id}: {desc}\n\n'
+            f'> This stub was auto-generated by `gxpmd-harden.py` from source annotations.\n'
+            f'> Review and flesh out for HIGH risk components.\n\n'
+            f'## Design Approach\n\n'
+            f'TODO: Document the technical design.\n\n'
+            f'## Data Flow\n\n'
+            f'TODO: Document data flows and security considerations.\n'
+        )
+
+        spec_file.write_text(content, encoding='utf-8')
+        created_specs.append(str(spec_file.relative_to(project_root)))
+
+    return {
+        'created_requirements': created_reqs,
+        'created_specifications': created_specs,
+        'skipped_existing': skipped,
+    }
+
+
+def collect_risk_concerns(annotations: list[dict]) -> list[dict]:
+    """Collect all @gxp-risk-concern annotations across the codebase."""
+    concerns = []
+    for ann in annotations:
+        for concern in ann.get('risk_concerns', []):
+            concerns.append({
+                'file': ann['file'],
+                'current_risk': ann['risk_levels'][0] if ann['risk_levels'] else 'UNKNOWN',
+                'concern': concern,
+            })
+    return concerns
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
 def main():
     parser = argparse.ArgumentParser(
-        description='GxP.MD v2.0.0 Compliance Sweep Tool',
+        description='GxP.MD v2.1.0 Compliance Sweep Tool',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Outputs are written to the .gxp/ directory in the project root.',
     )
@@ -730,7 +924,24 @@ def main():
         coverage_data = json.loads(args.coverage.read_text(encoding='utf-8'))
     coverage_issues = analyze_coverage(traceability, config, coverage_data)
 
-    # 8. Generate outputs
+    # 8. Generate artifact stubs
+    print('Generating artifact stubs...')
+    stub_summary = generate_artifact_stubs(traceability, annotations, config, root)
+    if stub_summary['created_requirements']:
+        for f in stub_summary['created_requirements']:
+            print(f'  Created {f}')
+    if stub_summary['created_specifications']:
+        for f in stub_summary['created_specifications']:
+            print(f'  Created {f}')
+    if not stub_summary['created_requirements'] and not stub_summary['created_specifications']:
+        print('  No stubs needed (all formal files exist or no annotations found)')
+
+    # 9. Collect risk concerns
+    risk_concerns = collect_risk_concerns(annotations)
+    if risk_concerns:
+        print(f'Found {len(risk_concerns)} risk classification concern(s)')
+
+    # 10. Generate outputs
     gxp_dir = root / config['artifacts_dir']
     gxp_dir.mkdir(parents=True, exist_ok=True)
 
@@ -749,7 +960,8 @@ def main():
     # Compliance status report
     status_report = generate_compliance_status(
         traceability, validation_issues, orphan_issues, coverage_issues,
-        annotations, config,
+        annotations, config, risk_concerns=risk_concerns,
+        stub_summary=stub_summary,
     )
     status_path = gxp_dir / 'compliance-status.md'
     status_path.write_text(status_report, encoding='utf-8')

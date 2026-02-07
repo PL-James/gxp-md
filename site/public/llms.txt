@@ -7,12 +7,12 @@ It defines a single file (GxP.MD) placed at a project root that instructs
 AI coding agents on GxP compliance requirements.
 
 ## Specification
-- [Full Specification](https://gxp.md/spec): The complete GxP.MD v2.0.0 standard
+- [Full Specification](https://gxp.md/spec): The complete GxP.MD v2.1.0 standard
 - [Getting Started](https://gxp.md/getting-started): How to add GxP.MD to your project
 - [Templates](https://gxp.md/templates): Downloadable starter files
 - [Regulatory Profiles](https://gxp.md/profiles): Pre-built compliance configurations
 
-## Key Concepts (v2.0.0)
+## Key Concepts (v2.1.0)
 - Annotation-first compliance — traceability lives in structured code annotations
 - Develop/Harden two-mode system — lightweight during development, formalized per sprint
 - Gate enforcement over process enforcement — defines what must be true, not how to work

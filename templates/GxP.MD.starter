@@ -1,5 +1,5 @@
 ---
-gxpmd_version: "2.0.0"
+gxpmd_version: "2.1.0"
 
 project:
   name: "YOUR_PROJECT_NAME"
@@ -166,7 +166,21 @@ Develop mode is the day-to-day operating mode. It is lightweight and annotation-
 1. **Annotate.** Add `@gxp-req`, `@gxp-spec`, and `@gxp-risk` to every source file with GxP-relevant logic. Annotations MAY be added during coding or immediately after, as long as they are present before commit.
 2. **Risk-assess.** Determine HIGH/MEDIUM/LOW for the component. Apply enforcement rules from the risk matrix.
 3. **Preserve annotations.** Do NOT remove or modify existing annotations unless the traceability mapping has genuinely changed.
-4. **Log new risks.** If the change introduces a new risk vector (new external dependency, PHI data flow, auth changes), add an entry to `.gxp/risk_assessment.log`.
+4. **Log new risks.** If the change introduces a new risk vector (new external dependency, PHI data flow, auth changes), add an entry to `.gxp/risk_assessment.log` using this format:
+
+    ```
+    ## RISK-{NNN}: {Title}
+    - **Date:** YYYY-MM-DD
+    - **Author:** author@example.com
+    - **Component:** path/to/affected/code
+    - **Risk Level:** HIGH | MEDIUM | LOW
+    - **Description:** What risk was identified.
+    - **Impact:** What could go wrong if the risk materializes.
+    - **Mitigation:** Controls in place to reduce the risk.
+    - **Status:** open | mitigated | accepted | closed
+    ```
+
+    Assign the next sequential `RISK-NNN` ID by checking the existing log. Entries are append-only and chronological.
 
 You are NOT required to create separate artifact files in `.gxp/` before writing code. Annotations are sufficient for gate passage. You MAY code first, plan first, or use any workflow -- gates enforce compliance, not process.
 
@@ -203,9 +217,11 @@ Execute these steps at every sprint boundary:
 
 **Step 4 -- Evidence Formalization.** Collect CI test outputs from the current sprint. Organize into evidence packages in `.gxp/evidence/` with `metadata.json`, `environment.json`, `test-output.log`, and `manifest.json`.
 
-**Step 5 -- Gap Analysis.** Report: missing annotations, incomplete chains, coverage shortfalls, missing evidence, stale annotations.
+**Step 5 -- Artifact Stub Generation.** For each requirement and specification found in annotations that has no corresponding formal file in `.gxp/`, generate a stub `REQ-NNN.md` or `SPEC-NNN-NNN.md` with annotation-derived metadata and `validation_status: draft`. Existing formal files are never overwritten.
 
-**Step 6 -- Compliance Status Report.** Generate `.gxp/compliance-status.md` with metrics, open gaps, risk status, and sign-off section (completed by humans, not agents).
+**Step 6 -- Gap Analysis.** Report: missing annotations, incomplete chains, coverage shortfalls, missing evidence, stale annotations.
+
+**Step 7 -- Compliance Status Report.** Generate `.gxp/compliance-status.md` with metrics, open gaps, risk status, and sign-off section (completed by humans, not agents).
 
 ### Why Per-Sprint
 
@@ -224,6 +240,16 @@ Assign risk levels based on impact:
 - **LOW**: Utilities, formatting, configuration, UI presentation, developer tooling, logging — failure causes inconvenience, not data integrity or safety issues.
 
 When uncertain, classify one level higher and consult the human operator.
+
+### Flagging Risk Disagreements
+
+If you believe an existing risk classification is incorrect (e.g., a component marked MEDIUM should be HIGH), do NOT change the `@gxp-risk` tag. Instead:
+
+1. Add a comment in the source file: `// @gxp-risk-concern "Recommend HIGH — handles PHI data flow"`
+2. Add an entry to `.gxp/risk_assessment.log` with status `review_requested`.
+3. Report the concern to the human operator.
+
+The `@gxp-risk-concern` tag is informational only — it does not affect gate enforcement. The human operator reviews the concern and either upgrades the risk level or acknowledges it.
 
 ### HIGH Risk
 
@@ -324,7 +350,7 @@ Initialize with:
 mkdir -p .gxp/requirements .gxp/user_stories .gxp/specs .gxp/evidence .gxp/adr
 ```
 
-Formal artifact files are OPTIONAL. Annotations in source and test files provide baseline traceability. Formal files provide additional depth for complex or HIGH risk components. During harden, formal documents are generated FROM annotations when separate files do not exist.
+Formal artifact files are OPTIONAL. Annotations in source and test files provide baseline traceability. Formal files provide additional depth for complex or HIGH risk components. During harden, the compliance sweep generates stub artifact files (`REQ-NNN.md`, `SPEC-NNN-NNN.md`) from annotation descriptions when separate files do not exist. These stubs contain the annotation-derived metadata and are marked `draft` — the team can flesh them out if additional depth is needed.
 
 ### Artifact ID Conventions
 
