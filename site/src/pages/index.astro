@@ -38,8 +38,8 @@ const jsonLd = {
       </p>
       <p class="text-lg text-slate-600 leading-relaxed">
         Place a single <code>GxP.MD</code> file at your project root. Your AI agent — whether Claude, GPT, Gemini,
-        or Copilot — reads it and knows how to produce compliant code, maintain traceability, generate evidence,
-        and enforce quality gates.
+        or Copilot — reads it and knows how to maintain compliance through code annotations, enforce quality gates,
+        and generate audit-ready evidence every sprint.
       </p>
     </div>
   </section>
@@ -51,31 +51,31 @@ const jsonLd = {
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
         <div>
           <div class="w-10 h-10 rounded-lg bg-gxp-100 flex items-center justify-center mb-4">
-            <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+            <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" /></svg>
           </div>
-          <h3 class="font-semibold text-slate-900 mb-2">Portable</h3>
-          <p class="text-sm text-slate-600">Single file at project root. No tooling required. Works with any AI agent that reads project files.</p>
+          <h3 class="font-semibold text-slate-900 mb-2">Annotations-First</h3>
+          <p class="text-sm text-slate-600">Traceability lives in structured code annotations. No separate documentation to maintain. Code and compliance move together.</p>
         </div>
         <div>
           <div class="w-10 h-10 rounded-lg bg-gxp-100 flex items-center justify-center mb-4">
-            <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+            <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
           </div>
-          <h3 class="font-semibold text-slate-900 mb-2">Agent-Agnostic</h3>
-          <p class="text-sm text-slate-600">Works with Claude, GPT, Gemini, Copilot, and any future AI coding assistant. No vendor lock-in.</p>
+          <h3 class="font-semibold text-slate-900 mb-2">Gate Enforcement</h3>
+          <p class="text-sm text-slate-600">Pre-commit, pre-merge, and per-release gates enforce compliance. Blocks non-compliant code before it reaches production.</p>
+        </div>
+        <div>
+          <div class="w-10 h-10 rounded-lg bg-gxp-100 flex items-center justify-center mb-4">
+            <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+          </div>
+          <h3 class="font-semibold text-slate-900 mb-2">Develop/Harden Modes</h3>
+          <p class="text-sm text-slate-600">Lightweight annotation-driven development. Per-sprint compliance formalization. No separate audit preparation phase.</p>
         </div>
         <div>
           <div class="w-10 h-10 rounded-lg bg-gxp-100 flex items-center justify-center mb-4">
             <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
           </div>
           <h3 class="font-semibold text-slate-900 mb-2">Risk-Proportionate</h3>
-          <p class="text-sm text-slate-600">Not binary pass/fail. Enforcement scales with risk: HIGH demands full rigor, LOW stays lightweight.</p>
-        </div>
-        <div>
-          <div class="w-10 h-10 rounded-lg bg-gxp-100 flex items-center justify-center mb-4">
-            <svg class="w-5 h-5 text-gxp-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
-          </div>
-          <h3 class="font-semibold text-slate-900 mb-2">Evidence-Based</h3>
-          <p class="text-sm text-slate-600">Cryptographically signed evidence packages. ALCOA+ data integrity. Verification over assurance.</p>
+          <p class="text-sm text-slate-600">Enforcement scales with risk level. HIGH demands full rigor and review. LOW stays lightweight and fast.</p>
         </div>
       </div>
     </div>

@@ -12,15 +12,18 @@ const jsonLd = {
 };
 
 const starterTemplate = `---
-gxpmd_version: "1.0.0"
+gxpmd_version: "2.0.0"
 
 project:
   name: "YOUR_PROJECT_NAME"
+  id: "YOUR_PROJECT_ID"
   version: "0.1.0"
   owner: "YOUR_NAME <your.email@YOUR_ORG.com>"
+  contact: "quality@YOUR_ORG.com"
 
 regulatory:
   profile: pharma-standard       # pharma-standard | medical-device | clinical-trial | laboratory
+  jurisdictions: [FDA, EMA]
   frameworks:
     - "21 CFR Part 11"
     - "EU Annex 11"
@@ -32,7 +35,7 @@ risk:
     HIGH:
       coverage_threshold: 95
       required_tiers: [IQ, OQ, PQ]
-      signing_required: false     # Set true to enable JWS evidence signing
+      signing_required: false
       review_required: true
     MEDIUM:
       coverage_threshold: 80
@@ -45,46 +48,68 @@ risk:
       signing_required: false
       review_required: false
 
+annotations:
+  schema_version: "1.0"
+  required_tags:
+    source: ["@gxp-req", "@gxp-spec", "@gxp-risk"]
+    test: ["@gxp-spec", "@trace", "@test-type", "@gxp-risk"]
+  format: block_comment           # block_comment | decorator | companion_file
+
 artifacts:
-  engine: none                    # rosie | custom | none
   directory: .gxp
+  engine: none                    # rosie | custom | none
+  formal_artifacts: optional      # required | optional | none
   traceability_enforcement: strict  # strict | warn | off
+
+gates:
+  pre_commit: [annotations_valid, no_untagged_gxp_code]
+  pre_merge: [all_tests_pass, coverage_meets_threshold, review_complete_if_required, no_orphan_annotations]
+  per_release: [harden_sweep_complete, traceability_matrix_current, evidence_packages_complete]
+
+harden:
+  frequency: per_sprint           # per_sprint | per_release | manual
+  outputs: [traceability_matrix, compliance_status_report, evidence_packages, gap_analysis]
 
 agent:
   mode: risk_proportionate        # strict | risk_proportionate | advisory
 ---
 
-# GxP.MD -- Compliance Instructions for AI Coding Agents
+# GxP.MD -- Compliance Instructions for AI Coding Agents (v2)
 
-**This file is the operational compliance contract for this project.**
-Place it at the project root. AI coding agents read it at session start
-and follow the directives below.
+**This file is the compliance contract for this project.** An AI agent
+reading only this file has everything it needs to operate compliantly.
+Traceability lives in code annotations. Compliance is enforced at gates.
 
 ---
 
-## Session Start Protocol
+## 1. Session Start Protocol
 
-When you begin a session on this project, execute these steps in order:
+When you begin a session on this project:
 
-1. **Read this file** (\\\`GxP.MD\\\`). Parse the YAML frontmatter.
-2. **Read \\\`.gxp/system_context.md\\\`** to understand system boundaries.
-3. **Scan \\\`.gxp/requirements/\\\`** and \\\`.gxp/specs/\\\` for current state.
-4. **Check risk level.** Apply enforcement rules accordingly.
-5. **Report any gaps** before writing new code.
+1. **Read this file.** Parse the YAML frontmatter for risk matrix,
+   annotation requirements, and gate definitions.
+2. **Read \\\`.gxp/system_context.md\\\`** if it exists, to understand
+   system boundaries and intended use.
+3. **Determine the risk level** of the area being modified by checking
+   existing \\\`@gxp-risk\\\` annotations in the relevant source files.
 
-## Core Rules
+## 2. Annotation Schema
 
-### The V-Model Is Law
+Annotations are the source of truth for traceability. They live in code,
+move with code, and are reviewed with code.
 
-Never write implementation code without a corresponding User Story
-and Technical Specification. The traceability chain is:
+Example (TypeScript):
+\\\`\\\`\\\`typescript
+/**
+ * @gxp-req REQ-001 "Authenticate users via secure credential exchange"
+ * @gxp-spec SPEC-001-001 "OAuth2 PKCE flow implementation"
+ * @gxp-risk HIGH
+ */
+export async function authenticateUser(creds: LoginCredentials) { }
+\\\`\\\`\\\`
 
-REQ-001 -> US-001-001 -> SPEC-001-001 -> src/ -> tests/
-
-If the spec does not exist, create it first.
-
-## [... Full template continues with Risk-Level Behavior,
-##  Testing & Evidence, Quality Gates, and more]
+## [... Full template continues with Develop Mode, Harden Mode,
+##  Risk-Level Behavior, Quality Gates, Evidence Capture, and more]
 ##
 ## Download the complete file below.`;
 
@@ -298,17 +323,22 @@ const manifestTemplate = `{
         After creating your GxP.MD file and initializing the .gxp/ directory, your project should look like this:
       </p>
       <pre class="p-6 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-lg border border-slate-200"><code>{`your-project/
-├── GxP.MD                    ← Compliance contract (project root)
-├── .gxp/                     ← Artifact directory
-│   ├── system_context.md     ← Apex document
-│   ├── risk_assessment.log   ← Risk register
-│   ├── adr/                  ← Architecture Decision Records
-│   ├── requirements/         ← REQ-XXX.md files
-│   ├── user_stories/         ← US-XXX-XXX.md files
-│   ├── specs/                ← SPEC-XXX-XXX.md files
-│   └── evidence/             ← Evidence packages
-├── src/                      ← Source code
-└── tests/                    ← Test files with @gxp-tag annotations`}</code></pre>
+├── GxP.MD                         ← Compliance contract (project root)
+├── .gxp/                          ← Artifact directory
+│   ├── system_context.md          ← System description & boundaries
+│   ├── risk_assessment.log        ← Risk register (chronological)
+│   ├── traceability-matrix.json   ← Generated during harden
+│   ├── compliance-status.md       ← Generated during harden
+│   ├── requirements/              ← OPTIONAL: REQ-NNN.md formal docs
+│   ├── user_stories/              ← OPTIONAL: US-NNN-NNN.md formal docs
+│   ├── specs/                     ← OPTIONAL: SPEC-NNN-NNN.md formal docs
+│   ├── adr/                       ← OPTIONAL: Architecture Decision Records
+│   └── evidence/                  ← Evidence packages (harden output)
+├── src/                           ← Source code (with @gxp annotations)
+└── tests/                         ← Test files (with @gxp annotations)
+    ├── iq/                        ← Installation Qualification
+    ├── oq/                        ← Operational Qualification
+    └── pq/                        ← Performance Qualification`}</code></pre>
     </section>
   </article>
 </Base>

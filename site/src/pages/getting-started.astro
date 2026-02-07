@@ -12,7 +12,7 @@ const jsonLd = {
 };
 
 const minimalGxpMd = `---
-gxpmd_version: "1.0.0"
+gxpmd_version: "2.0.0"
 
 project:
   name: "My Project"
@@ -25,9 +25,27 @@ regulatory:
 risk:
   overall: MEDIUM
 
+annotations:
+  schema_version: "1.0"
+  required_tags:
+    source: ["@gxp-req", "@gxp-spec", "@gxp-risk"]
+    test: ["@gxp-spec", "@trace", "@test-type", "@gxp-risk"]
+
 artifacts:
   engine: rosie
   directory: .gxp
+  formal_artifacts: optional
+
+gates:
+  pre_commit:
+    - annotations_valid
+    - no_untagged_gxp_code
+  pre_merge:
+    - all_tests_pass
+    - coverage_meets_threshold
+
+harden:
+  frequency: per_sprint
 
 agent:
   mode: risk_proportionate
@@ -35,8 +53,8 @@ agent:
 
 # Core Principles
 
-The V-Model is law. Never write code without
-a corresponding User Story and Tech Spec.`;
+Annotations are the source of truth.
+Traceability lives in code, not separate docs.`;
 ---
 
 <Base
@@ -121,38 +139,42 @@ a corresponding User Story and Tech Spec.`;
     <section class="mb-16">
       <div class="flex items-center gap-3 mb-4">
         <span class="w-8 h-8 rounded-full bg-gxp-100 text-gxp-800 font-bold text-sm flex items-center justify-center">3</span>
-        <h2 class="text-2xl font-bold text-slate-900">Initialize the .gxp/ directory</h2>
+        <h2 class="text-2xl font-bold text-slate-900">Start developing with annotations</h2>
       </div>
       <p class="text-slate-600 mb-6">
-        Create the artifact directory structure. This is where your V-Model documentation lives.
+        GxP.MD v2 is annotation-first. Add compliance metadata directly to your code as structured comments. Your agent will guide you through the annotation format.
       </p>
       <div class="rounded-lg border border-slate-200 overflow-hidden mb-4">
         <div class="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
-          <span class="font-mono text-sm text-slate-600">Terminal</span>
+          <span class="font-mono text-sm text-slate-600">src/auth/login.ts</span>
         </div>
-        <pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-none border-none m-0"><code>mkdir -p .gxp/requirements .gxp/user_stories .gxp/specs .gxp/evidence .gxp/adr</code></pre>
+        <pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-none border-none m-0"><code>{`/**
+ * @gxp-req REQ-001 "User authentication"
+ * @gxp-spec SPEC-001-001 "OAuth2 PKCE flow"
+ * @gxp-risk HIGH
+ */
+export async function authenticateUser(credentials: LoginCredentials) {
+  // implementation
+}`}</code></pre>
       </div>
-      <p class="text-slate-600 mb-4">Then create the apex document — <code>.gxp/system_context.md</code>:</p>
       <div class="rounded-lg border border-slate-200 overflow-hidden">
         <div class="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
-          <span class="font-mono text-sm text-slate-600">.gxp/system_context.md</span>
+          <span class="font-mono text-sm text-slate-600">tests/oq/auth/login.test.ts</span>
         </div>
-        <pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-none border-none m-0"><code>{`---
-id: "your-uuid-here"
-project_name: "My Project"
-version: "0.1.0"
-gxp_risk_rating: MEDIUM
-validation_status: DRAFT
-intended_use: "Describe the system's intended use"
----
-
-# System Context
-
-Describe the system boundary, architecture,
-and regulatory scope here.`}</code></pre>
+        <pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-none border-none m-0"><code>{`/**
+ * @gxp-spec SPEC-001-001
+ * @trace US-001-001
+ * @test-type OQ
+ * @gxp-risk HIGH
+ */
+describe("User authentication", () => {
+  it("should authenticate valid credentials", () => {
+    // test implementation
+  });
+});`}</code></pre>
       </div>
       <p class="mt-4 text-sm text-slate-500">
-        Download artifact templates from the <a href="/templates" class="text-gxp-700 hover:underline">Templates</a> page.
+        Annotations are lightweight during development. Formal artifact files in <code>.gxp/</code> are optional — only needed for complex HIGH risk components.
       </p>
     </section>
 
@@ -160,37 +182,32 @@ and regulatory scope here.`}</code></pre>
     <section class="mb-16">
       <div class="flex items-center gap-3 mb-4">
         <span class="w-8 h-8 rounded-full bg-gxp-100 text-gxp-800 font-bold text-sm flex items-center justify-center">4</span>
-        <h2 class="text-2xl font-bold text-slate-900">Start developing</h2>
+        <h2 class="text-2xl font-bold text-slate-900">Run harden mode per sprint</h2>
       </div>
       <p class="text-slate-600 mb-6">
-        Your AI agent will now read the <code>GxP.MD</code> file at session start and follow the compliance directives automatically. The agent will:
+        At the end of each sprint (or release), run harden mode to formalize the compliance record. This generates:
       </p>
       <ul class="space-y-3 text-slate-600">
         <li class="flex items-start gap-3">
           <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          <span>Read <code>.gxp/system_context.md</code> to understand the system boundary and risk rating</span>
+          <span><strong>Traceability Matrix</strong> — Complete REQ → US → SPEC → CODE → TEST chains from annotations</span>
         </li>
         <li class="flex items-start gap-3">
           <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          <span>Create requirements, user stories, and specifications before writing code</span>
+          <span><strong>Compliance Status Report</strong> — Metrics, gap analysis, and sign-off section</span>
         </li>
         <li class="flex items-start gap-3">
           <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          <span>Maintain traceability links between all artifacts</span>
+          <span><strong>Evidence Packages</strong> — Formalized test results with manifests and optional signatures</span>
         </li>
         <li class="flex items-start gap-3">
           <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          <span>Tag tests with GxP annotations (<code>@gxp-tag</code>, <code>@trace</code>, <code>@test-type</code>)</span>
-        </li>
-        <li class="flex items-start gap-3">
-          <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          <span>Generate signed evidence packages for verification</span>
-        </li>
-        <li class="flex items-start gap-3">
-          <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          <span>Enforce quality gates before commits and merges</span>
+          <span><strong>Gap Analysis</strong> — Missing annotations, incomplete chains, coverage shortfalls</span>
         </li>
       </ul>
+      <p class="text-slate-600 mt-6">
+        The last harden output IS your audit record. There is no separate audit preparation phase. This satisfies ALCOA+ Contemporaneous compliance.
+      </p>
     </section>
 
     <!-- Next Steps -->

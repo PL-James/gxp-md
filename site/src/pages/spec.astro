@@ -36,51 +36,94 @@ const htmlContent = await marked.parse(markdownBody);
 const tocItems = [
   { id: 'abstract', label: 'Abstract' },
   { id: '1-core-principles', label: '1. Core Principles', children: [
-    { id: '11-the-v-model-is-law', label: '1.1 V-Model is Law' },
-    { id: '12-traceability-is-mandatory', label: '1.2 Traceability' },
-    { id: '13-risk-awareness', label: '1.3 Risk Awareness' },
-    { id: '14-evidence-over-assurance', label: '1.4 Evidence' },
+    { id: '11-traceability-is-law', label: '1.1 Traceability is Law' },
+    { id: '12-annotations-are-source-of-truth', label: '1.2 Annotations are Source of Truth' },
+    { id: '13-gates-over-process', label: '1.3 Gates Over Process' },
+    { id: '14-risk-proportionate-enforcement', label: '1.4 Risk-Proportionate Enforcement' },
+    { id: '15-contemporaneous-compliance-alcoa', label: '1.5 Contemporaneous Compliance (ALCOA)' },
+    { id: '16-agent-agnosticism', label: '1.6 Agent Agnosticism' },
   ]},
-  { id: '2-agent-behavior-by-risk-level', label: '2. Agent Behavior', children: [
-    { id: '21-high-risk-components', label: '2.1 HIGH Risk' },
-    { id: '22-medium-risk-components', label: '2.2 MEDIUM Risk' },
-    { id: '23-low-risk-components', label: '2.3 LOW Risk' },
+  { id: '2-annotation-schema', label: '2. Annotation Schema', children: [
+    { id: '21-source-file-annotations', label: '2.1 Source File Annotations' },
+    { id: '22-test-file-annotations', label: '2.2 Test File Annotations' },
+    { id: '23-the-traceability-chain-through-annotations', label: '2.3 Traceability Chain' },
+    { id: '24-when-to-use-formal-artifact-files', label: '2.4 Formal Artifact Files' },
   ]},
-  { id: '3-development-rules', label: '3. Development Rules' },
-  { id: '4-documentation-rules', label: '4. Documentation Rules' },
-  { id: '5-testing-rules', label: '5. Testing Rules' },
-  { id: '6-data-integrity--alcoa-compliance', label: '6. ALCOA+ Compliance' },
-  { id: '7-quality-gate-checklists', label: '7. Quality Gates' },
-  { id: '8-repository-structure', label: '8. Repository Structure' },
-  { id: '9-appendix-a-regulatory-profile-reference', label: '9. Profiles' },
-  { id: '10-appendix-b-custom-directives', label: '10. Custom Directives' },
-  { id: '11-appendix-c-glossary', label: '11. Glossary' },
-  { id: '12-appendix-d-conformance', label: '12. Conformance' },
+  { id: '3-develop-mode', label: '3. Develop Mode', children: [
+    { id: '31-session-start-protocol', label: '3.1 Session Start Protocol' },
+    { id: '32-writing-code', label: '3.2 Writing Code' },
+    { id: '33-writing-tests', label: '3.3 Writing Tests' },
+    { id: '34-gate-enforcement-develop-mode', label: '3.4 Gate Enforcement' },
+  ]},
+  { id: '4-harden-mode', label: '4. Harden Mode', children: [
+    { id: '41-when-to-harden', label: '4.1 When to Harden' },
+    { id: '42-compliance-sweep-protocol', label: '4.2 Compliance Sweep Protocol' },
+    { id: '43-traceability-matrix-format', label: '4.3 Traceability Matrix' },
+    { id: '44-compliance-status-report', label: '4.4 Compliance Status Report' },
+    { id: '45-evidence-package-structure', label: '4.5 Evidence Package Structure' },
+  ]},
+  { id: '5-risk-level-behavior', label: '5. Risk-Level Behavior', children: [
+    { id: '51-high-risk-components', label: '5.1 HIGH Risk Components' },
+    { id: '52-medium-risk-components', label: '5.2 MEDIUM Risk Components' },
+    { id: '53-low-risk-components', label: '5.3 LOW Risk Components' },
+    { id: '54-strict-mode', label: '5.4 Strict Mode' },
+    { id: '55-advisory-mode', label: '5.5 Advisory Mode' },
+  ]},
+  { id: '6-testing-rules', label: '6. Testing Rules', children: [
+    { id: '61-test-tag-format', label: '6.1 Test Tag Format' },
+    { id: '62-ci-native-evidence-capture', label: '6.2 CI-Native Evidence Capture' },
+    { id: '63-fallback-inference-for-untagged-tests', label: '6.3 Fallback Inference' },
+  ]},
+  { id: '7-data-integrity--alcoa-compliance', label: '7. ALCOA+ Compliance', children: [
+    { id: '71-attributable', label: '7.1 Attributable' },
+    { id: '72-legible', label: '7.2 Legible' },
+    { id: '73-contemporaneous', label: '7.3 Contemporaneous' },
+    { id: '74-original', label: '7.4 Original' },
+    { id: '75-accurate', label: '7.5 Accurate' },
+    { id: '76-complete-alcoa-extension', label: '7.6 Complete' },
+    { id: '77-consistent-alcoa-extension', label: '7.7 Consistent' },
+    { id: '78-enduring-alcoa-extension', label: '7.8 Enduring' },
+    { id: '79-available-alcoa-extension', label: '7.9 Available' },
+  ]},
+  { id: '8-quality-gates', label: '8. Quality Gates', children: [
+    { id: '81-pre-commit-gate', label: '8.1 Pre-Commit Gate' },
+    { id: '82-pre-merge-gate', label: '8.2 Pre-Merge Gate' },
+    { id: '83-per-release-gate-harden', label: '8.3 Per-Release Gate' },
+  ]},
+  { id: '9-repository-structure', label: '9. Repository Structure', children: [
+    { id: '91-system-context-document', label: '9.1 System Context Document' },
+    { id: '92-risk-assessment-log', label: '9.2 Risk Assessment Log' },
+  ]},
+  { id: '10-artifact-schemas-for-formal-artifact-files', label: '10. Artifact Schemas' },
+  { id: '11-appendix-a-regulatory-profile-reference', label: '11. Appendix A: Regulatory Profiles' },
+  { id: '12-appendix-b-custom-directives', label: '12. Appendix B: Custom Directives' },
+  { id: '13-appendix-c-glossary', label: '13. Appendix C: Glossary' },
+  { id: '14-appendix-d-conformance', label: '14. Appendix D: Conformance' },
 ];
 
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": "TechArticle",
-  "headline": "GxP.MD Specification v1.0.0",
+  "headline": "GxP.MD Specification v2.0.0",
   "description": "The complete GxP.MD specification for AI coding agents in regulated industries.",
   "author": { "@type": "Organization", "name": "PharmaLedger Association" },
   "datePublished": "2026-02-07",
-  "version": "1.0.0"
+  "version": "2.0.0"
 };
 ---
 
 <Base
-  title="Specification v1.0.0 — GxP.MD"
-  description="The complete GxP.MD specification. Defines YAML frontmatter schema, agent behavioral directives, V-Model traceability, risk-proportionate enforcement, and ALCOA+ data integrity rules."
+  title="Specification v2.0.0 — GxP.MD"
+  description="The complete GxP.MD specification. Defines YAML frontmatter schema, annotation-first compliance, develop/harden modes, gate enforcement, and ALCOA+ data integrity rules."
   type="article"
-  keywords="GxP.MD specification, GxP compliance standard, AI agent compliance, V-Model validation, ALCOA+ data integrity"
+  keywords="GxP.MD specification, GxP compliance standard, AI agent compliance, annotation-first, develop harden modes, ALCOA+ data integrity"
   jsonLd={jsonLd}
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
     <div class="mb-12">
       <div class="flex items-center gap-3 mb-4">
         <h1 class="text-4xl font-bold text-slate-900">Specification</h1>
-        <span class="bg-gxp-100 text-gxp-800 text-sm font-mono font-medium px-2.5 py-0.5 rounded">v1.0.0</span>
+        <span class="bg-gxp-100 text-gxp-800 text-sm font-mono font-medium px-2.5 py-0.5 rounded">v2.0.0</span>
       </div>
       <p class="text-lg text-slate-600 max-w-2xl mb-6">
         The complete GxP.MD specification. This document defines the compliance instruction standard for AI coding agents in regulated industries.
