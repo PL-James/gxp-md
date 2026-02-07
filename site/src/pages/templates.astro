@@ -15,39 +15,78 @@ const starterTemplate = `---
 gxpmd_version: "1.0.0"
 
 project:
-  name: "Your Project Name"        # Required
-  id: "your-project-id"            # UUID recommended
-  version: "0.1.0"                 # SemVer
-  owner: "Your Organization"
-  contact: "compliance@example.com"
+  name: "YOUR_PROJECT_NAME"
+  version: "0.1.0"
+  owner: "YOUR_NAME <your.email@YOUR_ORG.com>"
 
 regulatory:
-  profile: pharma-standard         # pharma-standard | medical-device
-                                   # clinical-trial | laboratory
-  jurisdictions: [FDA, EMA]        # Regulatory bodies
-  frameworks:                      # Applicable standards
+  profile: pharma-standard       # pharma-standard | medical-device | clinical-trial | laboratory
+  frameworks:
     - "21 CFR Part 11"
     - "EU Annex 11"
-  gamp_category: 5                 # GAMP software category (1-5)
+  gamp_category: 5               # 1=Infrastructure, 3=COTS, 4=Configured, 5=Custom
 
 risk:
-  overall: MEDIUM                  # HIGH | MEDIUM | LOW
+  overall: HIGH                   # HIGH | MEDIUM | LOW
+  matrix:
+    HIGH:
+      coverage_threshold: 95
+      required_tiers: [IQ, OQ, PQ]
+      signing_required: false     # Set true to enable JWS evidence signing
+      review_required: true
+    MEDIUM:
+      coverage_threshold: 80
+      required_tiers: [OQ, PQ]
+      signing_required: false
+      review_required: false
+    LOW:
+      coverage_threshold: 60
+      required_tiers: [OQ]
+      signing_required: false
+      review_required: false
 
 artifacts:
-  engine: rosie                    # rosie | custom | none
-  directory: .gxp                  # Artifact root directory
+  engine: none                    # rosie | custom | none
+  directory: .gxp
+  traceability_enforcement: strict  # strict | warn | off
 
 agent:
-  mode: risk_proportionate         # strict | risk_proportionate | advisory
+  mode: risk_proportionate        # strict | risk_proportionate | advisory
 ---
 
-# Core Principles
+# GxP.MD -- Compliance Instructions for AI Coding Agents
 
-The V-Model is law. NEVER write code without a
-corresponding User Story and Technical Specification.
+**This file is the operational compliance contract for this project.**
+Place it at the project root. AI coding agents read it at session start
+and follow the directives below.
 
-Traceability is mandatory. Every source file and test
-MUST link to a requirement or specification ID.`;
+---
+
+## Session Start Protocol
+
+When you begin a session on this project, execute these steps in order:
+
+1. **Read this file** (\\\`GxP.MD\\\`). Parse the YAML frontmatter.
+2. **Read \\\`.gxp/system_context.md\\\`** to understand system boundaries.
+3. **Scan \\\`.gxp/requirements/\\\`** and \\\`.gxp/specs/\\\` for current state.
+4. **Check risk level.** Apply enforcement rules accordingly.
+5. **Report any gaps** before writing new code.
+
+## Core Rules
+
+### The V-Model Is Law
+
+Never write implementation code without a corresponding User Story
+and Technical Specification. The traceability chain is:
+
+REQ-001 -> US-001-001 -> SPEC-001-001 -> src/ -> tests/
+
+If the spec does not exist, create it first.
+
+## [... Full template continues with Risk-Level Behavior,
+##  Testing & Evidence, Quality Gates, and more]
+##
+## Download the complete file below.`;
 
 const systemContextTemplate = `---
 id: "00000000-0000-0000-0000-000000000000"   # Generate a UUID
@@ -205,7 +244,7 @@ const manifestTemplate = `{
     <div class="space-y-8">
       <TemplatePreview
         filename="GxP.MD.starter"
-        description="Minimal GxP.MD file — drop this at your project root"
+        description="Self-contained compliance contract — drop at your project root. Includes all behavioral directives."
         language="yaml"
         content={starterTemplate}
         downloadPath="https://raw.githubusercontent.com/PL-James/gxp-md/main/templates/GxP.MD.starter"
@@ -267,7 +306,7 @@ const manifestTemplate = `{
 │   ├── requirements/         ← REQ-XXX.md files
 │   ├── user_stories/         ← US-XXX-XXX.md files
 │   ├── specs/                ← SPEC-XXX-XXX.md files
-│   └── evidence/             ← Signed evidence packages
+│   └── evidence/             ← Evidence packages
 ├── src/                      ← Source code
 └── tests/                    ← Test files with @gxp-tag annotations`}</code></pre>
     </section>
