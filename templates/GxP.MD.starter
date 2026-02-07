@@ -1,211 +1,288 @@
 ---
-# GxP.MD Project Definition
-# This file establishes GxP compliance requirements for AI-assisted development.
-# Fill in ALL fields before starting development work.
-
-# ============================================================================
-# PROJECT METADATA
-# ============================================================================
+gxpmd_version: "1.0.0"
 
 project:
-  # Short, memorable name for this project
-  name: "Your Project Name"
-
-  # Semantic version (increment on major changes)
+  name: "YOUR_PROJECT_NAME"
   version: "0.1.0"
-
-  # Brief description of what this system does
-  description: "One-sentence description of project purpose"
-
-  # GxP risk classification determines validation rigor
-  # HIGH    = Patient safety impact, regulatory submissions, GMP records
-  # MEDIUM  = Quality system impact, indirect patient safety
-  # LOW     = Supporting tools, non-GxP infrastructure
-  gxp_risk: HIGH
-
-  # Current validation lifecycle state
-  # DRAFT       = Under development, not validated
-  # VALIDATED   = Passed IQ/OQ/PQ, approved for use
-  # DEPRECATED  = No longer supported, migration required
-  validation_status: DRAFT
-
-# ============================================================================
-# REGULATORY CONTEXT
-# ============================================================================
+  owner: "YOUR_NAME <your.email@YOUR_ORG.com>"
 
 regulatory:
-  # Intended use statement (critical for scope control)
-  intended_use: |
-    Describe what this system is designed to do and WHO uses it.
-    Example: "Web application for quality managers to review and approve
-    batch records in accordance with 21 CFR Part 11."
+  profile: pharma-standard       # pharma-standard | medical-device | clinical-trial | laboratory
+  frameworks:
+    - "21 CFR Part 11"
+    - "EU Annex 11"
+  gamp_category: 5               # 1=Infrastructure, 3=COTS, 4=Configured, 5=Custom
 
-  # Applicable regulatory standards
-  standards:
-    - "21 CFR Part 11"  # FDA Electronic Records/Signatures (US)
-    - "EU Annex 11"     # Computerized Systems (EU)
-    # Add others as applicable: GAMP 5, ISO 13485, GDP, etc.
+risk:
+  overall: HIGH                   # HIGH | MEDIUM | LOW
+  matrix:
+    HIGH:
+      coverage_threshold: 95
+      required_tiers: [IQ, OQ, PQ]
+      signing_required: false     # Set true to enable JWS evidence signing
+      review_required: true
+    MEDIUM:
+      coverage_threshold: 80
+      required_tiers: [OQ, PQ]
+      signing_required: false
+      review_required: false
+    LOW:
+      coverage_threshold: 60
+      required_tiers: [OQ]
+      signing_required: false
+      review_required: false
 
-  # GAMP Software Category (determines validation approach)
-  # 1 = Infrastructure (OS, database)
-  # 3 = Non-configured products (COTS)
-  # 4 = Configured products (ERP with config)
-  # 5 = Custom applications (bespoke software) ← Most AI-generated code
-  gamp_category: 5
+artifacts:
+  engine: none                    # rosie | custom | none
+  directory: .gxp
+  traceability_enforcement: strict  # strict | warn | off
 
-  # Data classification level
-  # Options: GxP-Critical, GxP-Supporting, Non-GxP
-  data_classification: "GxP-Critical"
+agent:
+  mode: risk_proportionate        # strict | risk_proportionate | advisory
+---
 
-# ============================================================================
-# SYSTEM BOUNDARY
-# ============================================================================
+# GxP.MD -- Compliance Instructions for AI Coding Agents
 
-system_boundary:
-  # What IS part of the validated system
-  includes:
-    - "Web application frontend (React)"
-    - "Backend API (Express.js)"
-    - "PostgreSQL database schema"
-    - "Authentication/authorization logic"
-    # List all components that require validation
-
-  # What is NOT part of the validated system
-  excludes:
-    - "Development tooling (TypeScript compiler, bundlers)"
-    - "CI/CD pipeline (GitHub Actions)"
-    - "Cloud infrastructure (Railway platform)"
-    - "Third-party libraries (React, Express)"
-    # Clearly state what you're NOT validating
-
-# ============================================================================
-# AI CODING AGENT INSTRUCTIONS
-# ============================================================================
-
-ai_instructions:
-  # Compliance artifacts are in .gxp/ directory:
-  #   .gxp/system_context.md          ← System overview
-  #   .gxp/requirements/REQ-*.md      ← Business/regulatory requirements
-  #   .gxp/user_stories/US-*.md       ← Testable user scenarios
-  #   .gxp/specs/SPEC-*.md            ← Technical specifications
-  #   .gxp/evidence/                  ← Test results, validation packages
-
-  traceability_required: true
-
-  # Requirements for code changes:
-  code_modification_rules:
-    - "MUST link all code changes to a SPEC-* specification"
-    - "MUST update source_files[] in SPEC when modifying code"
-    - "MUST update test_files[] in SPEC when adding/changing tests"
-    - "MUST generate evidence package after significant changes"
-    - "MUST NOT modify GxP-critical code without a traced specification"
-
-  # Evidence generation triggers:
-  evidence_triggers:
-    - "Completion of IQ/OQ/PQ testing tier"
-    - "Major feature implementation (linked to SPEC)"
-    - "Bug fix in GxP-critical code path"
-    - "Before creating a validation-ready release"
-
-  # Test coverage requirements (adjust based on risk level)
-  test_requirements:
-    unit_coverage_min: 80      # % of lines covered by unit tests
-    integration_required: true # Must have integration tests
-    e2e_required: true         # Must have end-to-end tests
-    performance_required: false # Load/stress testing needed?
-
-# ============================================================================
-# CHANGE CONTROL
-# ============================================================================
-
-change_control:
-  # Who must approve changes to GxP-critical code
-  approval_required:
-    - role: "Quality Assurance"
-      required_for: ["HIGH risk changes", "Validation artifacts"]
-    - role: "Technical Lead"
-      required_for: ["Architecture changes", "SPEC modifications"]
-
-  # Git workflow requirements
-  git_requirements:
-    branch_protection: true     # Require PR reviews for main
-    signed_commits: false       # GPG signing required?
-    linear_history: true        # No merge commits (rebase only)
-
-  # Validation re-test triggers (when to re-run OQ/PQ)
-  revalidation_triggers:
-    - "Changes to authentication/authorization logic"
-    - "Database schema modifications"
-    - "Changes to audit trail generation"
-    - "Upgrade of critical dependencies (React, database driver)"
-
-# ============================================================================
-# CONTACTS
-# ============================================================================
-
-contacts:
-  project_owner:
-    name: "Your Name"
-    email: "you@company.com"
-    role: "Project Lead"
-
-  quality_owner:
-    name: "QA Lead Name"
-    email: "qa@company.com"
-    role: "Quality Assurance"
+**This file is the operational compliance contract for this project.**
+Place it at the project root. AI coding agents read it at session start and follow the directives below. All behavioral rules are contained in this file -- do not rely on external documentation.
 
 ---
 
-# {Project Name} — GxP.MD Configuration
+## Session Start Protocol
 
-## Quick Start for AI Agents
+When you begin a session on this project, execute these steps in order:
 
-Before making ANY code changes:
+1. **Read this file** (`GxP.MD`). Parse the YAML frontmatter to load risk levels and configuration.
+2. **Read `.gxp/system_context.md`** to understand system boundaries, intended use, and architecture.
+3. **Scan `.gxp/requirements/`** and `.gxp/specs/` to understand what has been built and what is pending.
+4. **Check risk level.** The `risk.overall` field above sets the project baseline. Individual components may override this.
+5. **Report any gaps** (missing specs, orphan code, broken traceability) before writing new code.
 
-1. **Read** `.gxp/system_context.md` to understand system architecture
-2. **Identify** the requirement you're implementing (find the REQ-* file)
-3. **Locate** the user story (US-*) and specification (SPEC-*)
-4. **Verify** the spec's `source_files` and `test_files` match your changes
-5. **Update** the SPEC frontmatter if you modify different files
-6. **Run** all tests and generate evidence package when done
+---
 
-## System Overview
+## Core Rules
 
-<!-- Provide a brief architectural summary here -->
-This system is a [describe architecture: web app, API, batch processor, etc.]
-built with [list tech stack] to support [business purpose].
+### The V-Model Is Law
 
-**GxP Scope:** [Describe what parts are GxP-critical vs. supporting]
-
-## Traceability Hierarchy
+Never write implementation code without a corresponding User Story and Technical Specification. The traceability chain is:
 
 ```
-REQ-001 (Requirement)
-  └── US-001-001 (User Story)
-      └── SPEC-001-001 (Specification)
-          ├── src/auth/login.ts
-          ├── src/auth/session.ts
-          └── tests/auth.test.ts
+REQ-001 (Requirement: WHAT the system must do)
+  -> US-001-001 (User Story: WHO needs it and WHY)
+    -> SPEC-001-001 (Specification: HOW it will be built)
+      -> src/module/file.ts (Implementation: the code itself)
+        -> tests/oq/module/file.test.ts (Verification: proof it works)
 ```
 
-All code MUST trace back to a SPEC. All SPECs MUST trace to a US. All USs MUST trace to a REQ.
+If the spec does not exist, create it first. If the user story does not exist, create it first. If the requirement does not exist, create it first. Then write code.
+
+### Traceability
+
+When `traceability_enforcement` is `strict`:
+- Every source file with GxP-relevant logic MUST include a `@gxp-tag SPEC-XXX-XXX` annotation.
+- Every test file MUST include `@trace US-XXX-XXX` or `@trace SPEC-XXX-XXX` annotations.
+- Every spec MUST reference a parent user story via `parent_id`.
+- Every user story MUST reference a parent requirement via `parent_id`.
+
+When set to `warn`, violations produce warnings but do not block. When `off`, traceability is not enforced.
+
+### Risk Awareness
+
+Before modifying any component, determine its risk level:
+
+| Level    | Impact Domain                                           | Examples                                                      |
+|----------|---------------------------------------------------------|---------------------------------------------------------------|
+| **HIGH** | Patient safety, product quality, PHI/PII integrity      | Auth, dosage calculations, audit trails, e-signatures         |
+| **MEDIUM** | Regulated workflows, critical metadata                | Batch processing, reports, role management, notifications     |
+| **LOW**  | Non-GxP functionality, cosmetic elements                | UI theming, internal dashboards, developer utilities          |
+
+Apply the enforcement rules from the risk matrix in the frontmatter that match the component's level.
+
+---
 
 ## Development Workflow
 
-1. **Plan**: Identify or create REQ → US → SPEC hierarchy
-2. **Code**: Implement per SPEC, update `source_files` list
-3. **Test**: Write tests, update `test_files` list
-4. **Evidence**: Generate validation package for the SPEC
-5. **Review**: QA reviews evidence before merge
+### Before Writing Code
 
-## Validation Status
+1. **Identify the governing spec.** Find the `SPEC-XXX-XXX` in `.gxp/specs/` that covers this work. If none exists, create one.
+2. **Verify the traceability chain.** Confirm SPEC -> US -> REQ links are intact. Create missing artifacts if needed.
+3. **Assess risk level.** Determine HIGH/MEDIUM/LOW for the component being changed.
+4. **Plan verification.** Decide which test tiers (IQ, OQ, PQ) are required based on the risk level.
 
-- **Installation Qualification (IQ):** Not Started
-- **Operational Qualification (OQ):** Not Started
-- **Performance Qualification (PQ):** Not Started
+### While Writing Code
+
+1. **Add GxP annotations** to every source file implementing GxP-relevant logic:
+   ```
+   // @gxp-tag SPEC-001-003
+   // @gxp-criticality HIGH
+   ```
+2. **Do not remove existing annotations** unless the traceability mapping has genuinely changed.
+3. **Follow the spec.** Implementation must match the design approach in the governing specification. If you deviate, document the deviation in an ADR (Architecture Decision Record) in `.gxp/adr/`. ADRs are recommended, not required.
+4. **Update the spec.** If you modify files not listed in the spec's `source_files` or `test_files`, update those lists.
+5. **Stay in scope.** Do not modify code outside the governing spec's boundary without updating or creating the relevant spec first.
+
+### After Writing Code
+
+1. **Run all affected tests** across required verification tiers.
+2. **Check coverage** against the threshold for this component's risk level.
+3. **Capture evidence** -- record test results, environment info, and coverage data (see Testing & Evidence below).
+4. **Run quality gate checks** (see Quality Gates below).
+5. **Report results** to the human operator: test pass/fail counts, coverage percentage, gate status.
+
+If any gate fails, do NOT commit. Identify the failure, propose a fix, and ask for guidance if non-trivial.
 
 ---
 
-**This project follows the GxP.MD standard.**
-Specification: https://gxp.md/spec/v1
-Evidence format: ROSIE (Regulatory Open Standards for Inspection Evidence)
+## Risk-Level Behavior
+
+### HIGH Risk
+
+You MUST:
+- Verify complete traceability chain (REQ -> US -> SPEC) before writing code.
+- Include `@gxp-tag`, `@trace`, `@test-type`, and `@gxp-criticality HIGH` in all source and test files.
+- Achieve coverage at or above `coverage_threshold` (default: 95%).
+- Write tests spanning all required tiers (default: IQ, OQ, PQ).
+- Request peer review before merge.
+- Preserve ALL test output including failures and re-runs.
+
+You MUST NOT:
+- Skip or weaken tests to make a gate pass.
+- Modify evidence after generation.
+- Merge without completed peer review.
+- Change risk levels without human authorization.
+
+### MEDIUM Risk
+
+You SHOULD:
+- Maintain full traceability from spec through implementation to tests.
+- Include `@gxp-tag` and `@gxp-criticality MEDIUM` annotations.
+- Achieve coverage at or above `coverage_threshold` (default: 80%).
+- Write tests for required tiers (default: OQ, PQ).
+
+You MAY omit IQ verification if infrastructure is unchanged. You MAY proceed without peer review if automated gates pass.
+
+### LOW Risk
+
+You SHOULD:
+- Maintain traceability at the spec level.
+- Include `@gxp-criticality LOW` in source files.
+- Achieve coverage at or above `coverage_threshold` (default: 60%).
+- Write OQ-tier tests for functional correctness.
+
+You MAY omit IQ and PQ tiers, signing, and peer review.
+
+---
+
+## Testing & Evidence
+
+### Test Tag Format
+
+All test files MUST include these annotations (in a block comment at the top of the file or before each describe block):
+
+```typescript
+/**
+ * @gxp-tag SPEC-001-003
+ * @trace US-001-001
+ * @test-type OQ
+ * @gxp-criticality HIGH
+ */
+describe("User authentication - login flow", () => {
+  // tests here
+});
+```
+
+### Verification Tiers
+
+Organize tests by tier:
+
+```
+tests/
+  iq/       # Installation Qualification: dependencies, health checks, migrations, env config
+  oq/       # Operational Qualification: unit tests, integration tests, API contracts, coverage
+  pq/       # Performance Qualification: e2e tests, user workflows, load tests, screenshots
+```
+
+### Evidence Capture
+
+After running tests that contribute to GxP verification, capture evidence in `.gxp/evidence/`:
+
+```
+.gxp/evidence/{TIER}-{SPEC_ID}-{TIMESTAMP}/
+  metadata.json       # spec_id, tier, timestamp, result, test/pass/fail counts, coverage
+  environment.json    # OS, node version, runtime, git commit, git branch, CI info
+  test-output.log     # Complete, unedited test runner output
+```
+
+Evidence integrity rules:
+- Do NOT modify evidence after generation.
+- Do NOT delete failed test evidence. Both failures and subsequent passes must be preserved.
+- Test output logs must be complete and unedited -- no truncation or filtering.
+- Timestamps must reflect actual execution time (not backdated).
+
+### Signing (Optional)
+
+Cryptographic signing of evidence with JWS is an optional integrity enhancement. If `signing_required` is `true` for a risk level in the frontmatter, evidence packages should include a `signature.jws` file over a `manifest.json` containing SHA-256 hashes of all package files. Most projects can leave signing disabled and rely on git history and evidence capture for integrity.
+
+---
+
+## Quality Gates
+
+### Pre-Commit Checklist
+
+- [ ] All modified GxP source files have valid `@gxp-tag` annotations.
+- [ ] No orphan artifacts (specs without parent US, US without parent REQ).
+- [ ] All `@gxp-tag`, `@trace`, `@test-type` annotations are syntactically correct.
+- [ ] No merge conflict markers in any file.
+
+### Pre-Merge Checklist
+
+- [ ] All tests pass for affected components (zero failures).
+- [ ] Coverage meets or exceeds threshold for each component's risk level.
+- [ ] Peer review completed (if required by risk level).
+- [ ] No `draft`-status artifacts govern code being merged to main.
+- [ ] Evidence captured for all verification runs.
+
+### Pre-Release Checklist
+
+- [ ] All pre-commit and pre-merge gates satisfied.
+- [ ] All governing artifacts have `validation_status: validated`.
+- [ ] Evidence packages archived and retrievable.
+- [ ] Risk assessment reviewed and signed off by quality owner.
+
+---
+
+## Artifact Directory Structure
+
+The `.gxp/` directory holds all validation artifacts. This structure is recommended:
+
+```
+.gxp/
+  system_context.md                # System description, boundaries, intended use
+  requirements/                    # REQ-NNN.md files
+  user_stories/                    # US-NNN-NNN.md files
+  specs/                           # SPEC-NNN-NNN.md files
+  evidence/                        # Evidence packages (one directory per test run)
+  adr/                             # Architecture Decision Records (optional)
+```
+
+Initialize with:
+```bash
+mkdir -p .gxp/requirements .gxp/user_stories .gxp/specs .gxp/evidence
+```
+
+### Artifact ID Conventions
+
+| Artifact      | Format             | Example          |
+|---------------|--------------------|------------------|
+| Requirement   | `REQ-{NNN}`        | `REQ-001`        |
+| User Story    | `US-{NNN}-{NNN}`   | `US-001-001`     |
+| Specification | `SPEC-{NNN}-{NNN}` | `SPEC-001-001`   |
+| Evidence      | `{TIER}-{SPEC}-{TIMESTAMP}` | `OQ-SPEC-001-001-20260215T143000` |
+| ADR           | `ADR-{NNN}`        | `ADR-001`        |
+
+---
+
+## Project-Specific Rules
+
+<!-- Add your own directives below. Use RFC 2119 keywords (MUST, SHOULD, MAY). -->
+<!-- Custom rules MUST NOT weaken any MUST-level rule above. They MAY strengthen SHOULD/MAY rules. -->

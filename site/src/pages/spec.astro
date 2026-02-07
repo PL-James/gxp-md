@@ -17,99 +17,21 @@ if (closingIdx === -1) {
 const yamlFrontmatter = rawSpec.substring(firstIdx + 3, closingIdx).trim();
 const markdownBody = rawSpec.substring(closingIdx + 4).trim();
 
-// Simple markdown-to-HTML conversion for the spec body
-function mdToHtml(md: string): string {
-  let html = md;
+// Use marked for full markdown rendering (tables, code blocks, etc.)
+import { marked } from 'marked';
 
-  // Code blocks
-  html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_m, lang, code) {
-    return '<pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-lg border border-slate-800"><code>' + escapeHtml(code.trim()) + '</code></pre>';
-  });
+// Custom renderer for heading IDs
+const renderer = new marked.Renderer();
+renderer.heading = function(token: any) {
+  var raw = (typeof token === 'string') ? token : (token.text || '');
+  var level = (typeof token === 'object' && token.depth) ? token.depth : 2;
+  var id = raw.toLowerCase().replace(/<[^>]*>/g, '').replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+  return '<h' + level + ' id="' + id + '">' + raw + '</h' + level + '>\n';
+};
 
-  // Headers with IDs
-  html = html.replace(/^#### (.+)$/gm, function(_m, text) {
-    const id = makeId(text);
-    return '<h4 id="' + id + '">' + processInline(text) + '</h4>';
-  });
-  html = html.replace(/^### (.+)$/gm, function(_m, text) {
-    const id = makeId(text);
-    return '<h3 id="' + id + '">' + processInline(text) + '</h3>';
-  });
-  html = html.replace(/^## (.+)$/gm, function(_m, text) {
-    const id = makeId(text);
-    return '<h2 id="' + id + '">' + processInline(text) + '</h2>';
-  });
+marked.use({ renderer: renderer });
 
-  // Bold
-  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-  // Inline code
-  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-
-  // Italic
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-
-  // Unordered lists
-  html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
-  html = html.replace(/(<li>[\s\S]*?<\/li>)/g, function(block) {
-    if (!block.startsWith('<ul>')) {
-      return '<ul>' + block + '</ul>';
-    }
-    return block;
-  });
-  // Merge consecutive <ul> blocks
-  html = html.replace(/<\/ul>\s*<ul>/g, '');
-
-  // Ordered lists
-  html = html.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
-
-  // Paragraphs - wrap non-tag lines
-  const lines = html.split('\n');
-  const result: string[] = [];
-  let inParagraph = false;
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed === '') {
-      if (inParagraph) {
-        result.push('</p>');
-        inParagraph = false;
-      }
-      continue;
-    }
-    if (trimmed.startsWith('<h') || trimmed.startsWith('<pre') || trimmed.startsWith('<ul') || trimmed.startsWith('<ol') || trimmed.startsWith('<li') || trimmed.startsWith('<table') || trimmed.startsWith('</')) {
-      if (inParagraph) {
-        result.push('</p>');
-        inParagraph = false;
-      }
-      result.push(line);
-      continue;
-    }
-    if (!inParagraph) {
-      result.push('<p>' + line);
-      inParagraph = true;
-    } else {
-      result.push(line);
-    }
-  }
-  if (inParagraph) result.push('</p>');
-
-  return result.join('\n');
-}
-
-function escapeHtml(text: string): string {
-  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-function makeId(text: string): string {
-  return text.toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-}
-
-function processInline(text: string): string {
-  return text.replace(/`([^`]+)`/g, '<code>$1</code>');
-}
-
-const htmlContent = mdToHtml(markdownBody);
+const htmlContent = await marked.parse(markdownBody);
 
 const tocItems = [
   { id: 'abstract', label: 'Abstract' },

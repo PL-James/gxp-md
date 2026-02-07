@@ -77,7 +77,7 @@ risk:
         - IQ
         - OQ
         - PQ
-      signing_required: true  # Evidence packages MUST be cryptographically signed
+      signing_required: true  # Evidence packages SHOULD be cryptographically signed (optional)
       review_required: true   # Peer review MUST be completed before merge
     MEDIUM:
       coverage_threshold: 80
@@ -108,7 +108,7 @@ risk:
 #   {TIMESTAMP} — ISO 8601 timestamp (compact: YYYYMMDDTHHmmss)
 # ---------------------------------------------------------------------------
 artifacts:
-  engine: rosie                # Artifact engine: rosie | custom
+  engine: rosie                # Artifact engine: rosie | custom | none
   directory: .gxp              # Root directory for all validation artifacts
   id_schema:
     requirement: "REQ-{NNN}"
@@ -359,9 +359,9 @@ Risk levels are determined by the potential impact on:
 
 Compliance is demonstrated through verifiable evidence, not assertions.
 
-An agent MUST NOT claim that code is compliant, tested, or validated without producing corresponding evidence artifacts. "It works" is not evidence. A signed evidence package containing test output, environment snapshot, and system state hash IS evidence.
+An agent MUST NOT claim that code is compliant, tested, or validated without producing corresponding evidence artifacts. "It works" is not evidence. An evidence package containing test output, environment snapshot, and system state hash IS evidence.
 
-Every verification activity MUST produce an evidence package in `.gxp/evidence/` following the package format defined in Section 5.3.
+Every verification activity MUST produce an evidence record. When a `.gxp/evidence/` directory exists, the agent SHOULD store evidence packages there following the format defined in Section 5.3. When no artifact directory is configured (`artifacts.engine: none`), the agent MUST at minimum record test output and results in a reproducible format.
 
 ### 1.5 Agent Agnosticism
 
@@ -480,7 +480,7 @@ While writing implementation code, the agent MUST:
 
 2. **Preserve existing annotations.** The agent MUST NOT remove or modify existing `@gxp-tag` annotations unless the traceability mapping has genuinely changed.
 
-3. **Follow the specification.** Implementation MUST conform to the design approach described in the governing specification. Deviations from the specification require an Architecture Decision Record (ADR) in `.gxp/adr/`.
+3. **Follow the specification.** Implementation MUST conform to the design approach described in the governing specification. Deviations from the specification SHOULD be documented in an Architecture Decision Record (ADR) in `.gxp/adr/`.
 
 4. **Update risk assessment when needed.** If the implementation introduces a new risk vector (e.g., a new external dependency, a new data flow involving PHI, a change to authentication logic), the agent MUST add an entry to `.gxp/risk_assessment.log` with:
    - Date and author
@@ -591,7 +591,7 @@ An agent MUST NOT set `validation_status` to `validated` without human authoriza
 
 ### 4.2 Architecture Decision Records
 
-When the agent deviates from a specification's design approach or makes a significant architectural decision, it MUST create an ADR in `.gxp/adr/`.
+When the agent deviates from a specification's design approach or makes a significant architectural decision, it SHOULD create an ADR in `.gxp/adr/`.
 
 ADR filename format: `ADR-{NNN}-{short-description}.md`
 
@@ -791,9 +791,9 @@ Every test execution that contributes to GxP verification MUST produce an eviden
 
 #### Signing
 
-When `signing_required` is `true` for the component's risk level, the evidence package MUST include a `signature.jws` file containing an ES256 (ECDSA with P-256) JSON Web Signature over the contents of `manifest.json`.
+When `signing_required` is `true` for the component's risk level, the evidence package SHOULD include a `signature.jws` file containing an ES256 (ECDSA with P-256) JSON Web Signature over the contents of `manifest.json`. Cryptographic signing is an optional integrity enhancement — evidence capture is the primary requirement.
 
-The signing key MUST be managed according to the `evidence.key_management` configuration:
+If signing is enabled, the signing key SHOULD be managed according to the `evidence.key_management` configuration:
 
 | Method | Description |
 |--------|-------------|
@@ -864,8 +864,8 @@ Records MUST be the first-generation, unaltered version.
 
 **Agent Rules:**
 
-- Evidence packages MUST be signed using JWS to prove they have not been altered after generation.
-- The manifest hash chain (file hashes → manifest → signature) provides cryptographic proof of originality.
+- Evidence packages SHOULD be signed using JWS to prove they have not been altered after generation, when signing is enabled for the project's risk level.
+- The manifest hash chain (file hashes → manifest → optional signature) provides proof of originality.
 - The agent MUST NOT regenerate evidence packages to replace unfavorable results. If a test fails and is subsequently fixed, BOTH the failure evidence and the passing evidence MUST be retained.
 - Copies of artifacts (e.g., for archival or reporting) MUST reference the original location and hash.
 
@@ -910,7 +910,7 @@ Records MUST survive for the defined retention period.
 - Evidence packages MUST NOT be deleted before `evidence.retention_days` has elapsed.
 - The agent MUST NOT include evidence directories in `.gitignore` or any other exclusion mechanism.
 - When evidence approaches the retention limit, the agent SHOULD notify the human operator to initiate archival procedures.
-- Archived evidence MUST remain retrievable and verifiable (signature and hash chain intact).
+- Archived evidence MUST remain retrievable and verifiable (hash chain intact; signature verification where signing was used).
 
 ### 6.9 Available (ALCOA+ Extension)
 
