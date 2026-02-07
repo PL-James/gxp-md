@@ -258,7 +258,11 @@ Agents that cannot fulfill a MUST-level directive SHOULD halt and report the gap
 
 Annotations are the core mechanism by which GxP.MD v2 maintains traceability. This section defines the annotation tags, their syntax, and their placement rules.
 
-### 2.1 Source File Annotations
+### 2.1 What Is GxP-Relevant Code?
+
+Code is GxP-relevant if it processes, stores, or transmits regulated data, implements logic affecting product quality, safety, or efficacy, or enforces access controls or audit trails. Configuration files, build scripts, and presentation-only UI components are generally NOT GxP-relevant unless they directly affect regulated data flow. When uncertain, annotate — false positives cost less than false negatives.
+
+### 2.2 Source File Annotations
 
 Every source file implementing GxP-relevant logic MUST include annotations linking it to the governing requirements, specifications, and risk level.
 
@@ -318,7 +322,7 @@ def validate_batch_record(record: dict, schema: dict) -> ValidationResult:
 - Tags MUST use the exact format specified. Deviations (e.g., missing hyphens, incorrect casing of risk levels) will cause annotation validation failures at the pre-commit gate.
 - The optional description string in `@gxp-req` and `@gxp-spec` SHOULD be included for readability but is not required. When omitted, the ID alone is sufficient for traceability.
 
-### 2.2 Test File Annotations
+### 2.3 Test File Annotations
 
 Every test file verifying GxP-relevant functionality MUST include annotations linking it to the specification it verifies, the traceability chain, and the risk level.
 
@@ -360,7 +364,7 @@ describe("User authentication - OAuth2 PKCE login flow", () => {
 - Tags MUST appear in a block comment at the top of the test file or immediately preceding the `describe` block they govern.
 - A single test file MAY contain multiple tag blocks if it covers multiple specifications. Each block governs the `describe` block that immediately follows it.
 
-### 2.3 The Traceability Chain Through Annotations
+### 2.4 The Traceability Chain Through Annotations
 
 Annotations form the V-Model traceability chain without requiring separate artifact files. The chain works as follows:
 
@@ -388,7 +392,11 @@ When `traceability_enforcement` is set to `strict`:
 
 When `traceability_enforcement` is set to `warn`, violations produce warnings but do not block workflow progression. When set to `off`, traceability is not enforced.
 
-### 2.4 When to Use Formal Artifact Files
+#### Assigning New IDs
+
+To assign a new ID, scan existing annotations across the codebase for the highest sequence number and increment. For example, if the highest existing requirement is `REQ-012`, the next is `REQ-013`. Within a requirement, if the highest specification is `SPEC-012-003`, the next is `SPEC-012-004`. Always verify by searching: `grep -rn "@gxp-req\|@gxp-spec\|@trace" src/ tests/`
+
+### 2.6 When to Use Formal Artifact Files
 
 Annotations are the primary traceability mechanism, but formal artifact files in `.gxp/` provide additional depth when the complexity or risk of a component warrants it.
 
@@ -422,6 +430,8 @@ When an AI agent begins a development session on a project containing a GxP.MD f
 1. **Read GxP.MD** at the project root. Parse the YAML frontmatter to load regulatory context, risk configuration, annotation requirements, and gate definitions.
 2. **Read `.gxp/system_context.md`** if it exists, to understand system description, boundaries, and intended use.
 3. **Understand the risk level** of the area being modified. Check the risk matrix and any component-level risk annotations already present in the code.
+
+If resuming work on an existing project, the agent SHOULD scan for existing annotation IDs (e.g., `grep -r "@gxp-req" src/`) to understand the current traceability state and avoid ID conflicts when assigning new IDs.
 
 The agent SHOULD report any noteworthy findings (e.g., a component marked HIGH risk, an incomplete annotation chain in the area being modified) to the human operator before proceeding.
 
@@ -541,6 +551,8 @@ Harden mode MUST run at the frequency defined by `harden.frequency` in the front
 The output of each harden cycle is the compliance state of the project at that point in time. If an auditor arrives on any given day, the last harden output demonstrates compliance. There is no separate audit preparation activity.
 
 ### 4.2 Compliance Sweep Protocol
+
+The compliance sweep can be executed by the agent manually, by the `gxpmd-harden.py` tool included in the GxP.MD repository, or by equivalent CI/CD tooling. For projects with more than ~50 source files, automated tooling is strongly recommended over manual agent execution to avoid context window exhaustion.
 
 During harden mode, the agent or tooling performs the following compliance sweep:
 
@@ -777,7 +789,17 @@ The agent MUST NOT generate, rotate, or delete signing keys without explicit hum
 
 The `agent.mode` field in the frontmatter controls the enforcement posture. In `risk_proportionate` mode (the default), the agent calibrates its behavior to the risk level of the component under modification.
 
-### 5.1 HIGH Risk Components
+### 5.1 Classification Criteria
+
+Assign risk levels based on the impact of component failure:
+
+- **HIGH**: Patient safety, regulatory submission data, authentication/authorization, audit trails, data integrity mechanisms — failure could cause patient harm or regulatory violation.
+- **MEDIUM**: Business logic, data processing, API endpoints, external integrations, reporting — failure causes incorrect results but not direct safety impact.
+- **LOW**: Utilities, formatting, configuration, UI presentation, developer tooling, logging — failure causes inconvenience, not data integrity or safety issues.
+
+When uncertain, classify one level higher and consult the human operator. Risk levels MUST NOT be changed without human authorization.
+
+### 5.2 HIGH Risk Components
 
 HIGH risk components have direct impact on patient safety, product quality, or protected data integrity. The agent MUST apply maximum rigor.
 
@@ -802,7 +824,7 @@ HIGH risk components have direct impact on patient safety, product quality, or p
 3. Merge code without completed peer review.
 4. Modify risk levels without explicit human authorization.
 
-### 5.2 MEDIUM Risk Components
+### 5.3 MEDIUM Risk Components
 
 MEDIUM risk components affect regulated workflows or critical metadata but have no direct patient safety impact. The agent SHOULD apply thorough verification with pragmatic scope.
 
@@ -818,7 +840,7 @@ MEDIUM risk components affect regulated workflows or critical metadata but have 
 2. Proceed without peer review, provided all automated gates pass.
 3. Omit formal artifact files in `.gxp/`. Annotations are sufficient for MEDIUM risk traceability.
 
-### 5.3 LOW Risk Components
+### 5.4 LOW Risk Components
 
 LOW risk components have no GxP data impact. The agent MAY apply minimal verification while maintaining basic traceability.
 
@@ -834,11 +856,11 @@ LOW risk components have no GxP data impact. The agent MAY apply minimal verific
 2. Omit `@gxp-req` and `@trace` annotations. For LOW risk, a `@gxp-spec` reference is sufficient traceability.
 3. Omit formal artifact files entirely.
 
-### 5.4 Strict Mode
+### 5.5 Strict Mode
 
 When `agent.mode` is set to `strict`, ALL components are treated as HIGH risk regardless of their actual classification. All MUST-level directives from Section 5.1 apply universally. This mode is appropriate for initial validation campaigns or systems with uniformly high regulatory exposure.
 
-### 5.5 Advisory Mode
+### 5.6 Advisory Mode
 
 When `agent.mode` is set to `advisory`, all directives are downgraded to SHOULD-level recommendations. Violations produce warnings but never block workflow progression. This mode is appropriate during GxP.MD adoption when teams are migrating from unstructured workflows to annotation-based compliance.
 

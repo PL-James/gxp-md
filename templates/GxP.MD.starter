@@ -75,6 +75,8 @@ When you begin a session on this project:
 2. **Read `.gxp/system_context.md`** if it exists, to understand system boundaries and intended use.
 3. **Determine the risk level** of the area being modified by checking existing `@gxp-risk` annotations in the relevant source files and the risk matrix above.
 
+If resuming work on an existing project, scan for existing annotation IDs (e.g., `grep -r "@gxp-req" src/`) to understand current traceability state and avoid ID conflicts.
+
 Report noteworthy findings (HIGH risk components in scope, incomplete annotation chains) to the human operator before proceeding. The session start is intentionally minimal -- no full codebase scan required.
 
 ---
@@ -82,6 +84,10 @@ Report noteworthy findings (HIGH risk components in scope, incomplete annotation
 ## 2. Annotation Schema
 
 Annotations are the source of truth for traceability. They live in code, move with code, and are reviewed with code. Separate `.gxp/` artifact files are optional depth, not mandatory overhead.
+
+### What Is GxP-Relevant Code?
+
+Code is GxP-relevant if it processes, stores, or transmits regulated data, implements logic affecting product quality, safety, or efficacy, or enforces access controls or audit trails. Configuration files, build scripts, and presentation-only UI components are generally NOT GxP-relevant unless they directly affect regulated data flow. When uncertain, annotate — false positives cost less than false negatives.
 
 ### Source File Annotations
 
@@ -145,6 +151,10 @@ The ID scheme encodes the traceability chain: `US-001-xxx` belongs to `REQ-001`;
 REQ-001 -> US-001-001 -> SPEC-001-001 -> src/auth/login.ts -> tests/oq/auth/login.test.ts
 ```
 
+### Assigning New IDs
+
+To assign a new ID, scan existing annotations across the codebase for the highest sequence number and increment. For example, if the highest existing requirement is `REQ-012`, the next is `REQ-013`. Within a requirement, if the highest spec is `SPEC-012-003`, the next is `SPEC-012-004`. Always verify by searching: `grep -rn "@gxp-req\|@gxp-spec\|@trace" src/ tests/`
+
 ---
 
 ## 3. Develop Mode
@@ -179,6 +189,8 @@ All test files for GxP-relevant functionality MUST include the four required tes
 
 Harden mode formalizes the compliance state. It runs at the cadence set by `harden.frequency` (default: `per_sprint`). There is no separate audit mode -- harden IS audit-readiness.
 
+The compliance sweep can be executed via the `gxpmd-harden.py` tool from the GxP.MD repository, or manually by following the steps below. For projects with more than ~50 source files, tooling is strongly recommended over manual agent execution.
+
 ### Per-Sprint Compliance Sweep
 
 Execute these steps at every sprint boundary:
@@ -202,6 +214,16 @@ ALCOA Contemporaneous requires records at the time of the activity. The work hap
 ---
 
 ## 5. Risk-Level Behavior
+
+### Classification Criteria
+
+Assign risk levels based on impact:
+
+- **HIGH**: Patient safety, regulatory submission data, authentication/authorization, audit trails, data integrity mechanisms — failure could cause patient harm or regulatory violation.
+- **MEDIUM**: Business logic, data processing, API endpoints, external integrations, reporting — failure causes incorrect results but not direct safety impact.
+- **LOW**: Utilities, formatting, configuration, UI presentation, developer tooling, logging — failure causes inconvenience, not data integrity or safety issues.
+
+When uncertain, classify one level higher and consult the human operator.
 
 ### HIGH Risk
 
