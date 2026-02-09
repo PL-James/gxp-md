@@ -312,32 +312,36 @@ For artifact nodes, the ID comes directly from the annotation: `REQ-001`, `US-04
 
 ### 5.3 Coverage via Graph Reachability
 
-A requirement `REQ-NNN` is **covered** if there exists at least one path from any test node to `REQ-NNN` through the edge graph.
+A requirement `REQ-NNN` is **covered** if there exists at least one path between any test node and `REQ-NNN` through the edge graph.
 
-Algorithm (BFS from each requirement, traversing edges in reverse):
+**Edge direction recap:** Edges point from the thing-that-satisfies TO the thing-being-satisfied. A test `@gxp-verifies SPEC-042` creates an edge `FILE:test.ts → SPEC-042`. A source file `@gxp-satisfies REQ-001` creates an edge `FILE:src.ts → REQ-001`. A source file `@gxp-implements SPEC-042` creates an edge `FILE:src.ts → SPEC-042`.
+
+**The challenge:** A typical multi-hop path looks like: `FILE:test.ts → SPEC-042 ← FILE:src.ts → REQ-001`. Traversing only reverse edges (target→source) from `REQ-001` reaches `FILE:src.ts` but dead-ends there — the test node points at `SPEC-042`, not at `FILE:src.ts`. To find tests, we must traverse edges in **both directions** (undirected/bidirectional).
+
+Algorithm (BFS from each requirement, traversing edges as undirected):
 
 ```
 function is_covered(req_id, nodes, edges):
-    // Build reverse adjacency: target → [sources]
-    reverse_adj = build_reverse_adjacency(edges)
+    // Build undirected adjacency: node → [neighbors]
+    adj = build_undirected_adjacency(edges)
 
-    // BFS from req_id via reverse edges
+    // BFS from req_id via undirected edges
     visited = {req_id}
     queue = [req_id]
 
     while queue not empty:
         current = queue.pop_front()
-        for each source in reverse_adj[current]:
-            if source not in visited:
-                visited.add(source)
-                queue.append(source)
-                if nodes[source].phase == 'test':
-                    return true  // Found a test that reaches this requirement
+        for each neighbor in adj[current]:
+            if neighbor not in visited:
+                visited.add(neighbor)
+                queue.append(neighbor)
+                if nodes[neighbor].phase == 'test':
+                    return true  // Found a test connected to this requirement
 
-    return false  // No test reaches this requirement
+    return false  // No test is connected to this requirement
 ```
 
-**Why reverse traversal?** Edges point from the thing-that-satisfies TO the thing-being-satisfied. A test `@gxp-verifies SPEC-042` creates an edge `FILE:test.ts → SPEC-042`. A source file `@gxp-satisfies REQ-001` creates an edge `FILE:src.ts → REQ-001`. To find if a requirement is tested, you start at the requirement and walk backward through reverse edges to find test nodes.
+**Why undirected traversal?** In a typical multi-hop traceability path, edges alternate direction: a test file points at a SPEC (`FILE:test → SPEC`), and a source file also points at that SPEC (`FILE:src → SPEC`) as well as at a REQ (`FILE:src → REQ`). The SPEC node acts as a shared hub connecting tests to source files. Traversing only one edge direction from the requirement would dead-end at file nodes without discovering the test nodes connected through intermediate SPEC/US nodes. Undirected traversal allows the BFS to cross these hubs and find all connected test nodes regardless of edge direction.
 
 **Tier coverage** is calculated similarly: collect all `@test-type` values from test nodes reachable from a requirement. Compare against `required_tiers` from the risk matrix.
 

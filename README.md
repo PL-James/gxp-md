@@ -115,8 +115,8 @@ gxp-md/
 |   +-- GxP.MD.starter        #   Drop-in GxP.MD file
 |   +-- system-context.md     #   .gxp/system_context.md template
 |   +-- requirement.md        #   .gxp/requirements/REQ-NNN.md
-|   +-- user-story.md         #   .gxp/user_stories/US-NNN-NNN.md
-|   +-- specification.md      #   .gxp/specs/SPEC-NNN-NNN.md
+|   +-- user-story.md         #   .gxp/user_stories/US-NNN.md
+|   +-- specification.md      #   .gxp/specs/SPEC-NNN.md
 |   \-- evidence-manifest.json
 |
 +-- tools/                   # Compliance tooling

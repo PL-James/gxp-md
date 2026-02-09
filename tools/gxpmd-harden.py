@@ -295,8 +295,11 @@ def build_traceability(annotations: list[dict]) -> dict:
         for der_id in ann.get('derives_from', []):
             phase = _infer_phase(der_id)
             _ensure_node(nodes, der_id, phase)
-            # The current artifact derives from der_id
-            # This is used for US derives-from REQ, SPEC derives-from US, etc.
+            # @gxp-derives-from creates a dependency edge: the artifact declared
+            # by this file's other edge tags (satisfies/implements/verifies) depends
+            # on der_id. E.g., if file declares @gxp-implements SPEC-002 and
+            # @gxp-derives-from SPEC-001, the edge is SPEC-002 → SPEC-001
+            # (meaning SPEC-002 derives from / depends on SPEC-001).
             for own_id in ann.get('satisfies', []) + ann.get('implements', []) + ann.get('verifies', []):
                 edges.append({'from': own_id, 'to': der_id, 'type': 'derives_from', 'source_file': f})
 
@@ -333,20 +336,27 @@ def build_traceability(annotations: list[dict]) -> dict:
 def _calculate_coverage(nodes, edges):
     """Calculate which requirements are covered via graph reachability.
 
-    A requirement is covered if there exists at least one path from a
-    test node to the requirement through the edge graph.
-    """
-    # Build reverse adjacency list (from target to sources)
-    reverse_adj = defaultdict(list)
-    for edge in edges:
-        reverse_adj[edge['to']].append(edge['from'])
+    A requirement is covered if there exists a path connecting a test node
+    to the requirement through the edge graph (undirected traversal).
 
-    # For each requirement, check if any test node can reach it
+    Undirected traversal is necessary because edges point from satisfier
+    to satisfied (e.g., FILE:src → REQ, FILE:test → SPEC, FILE:src → SPEC).
+    A typical multi-hop path crosses through shared SPEC nodes:
+    FILE:test → SPEC ← FILE:src → REQ. Reverse-only traversal from REQ
+    would reach FILE:src but dead-end without discovering the test node.
+    """
+    # Build undirected adjacency list (both directions)
+    undirected_adj = defaultdict(list)
+    for edge in edges:
+        undirected_adj[edge['to']].append(edge['from'])
+        undirected_adj[edge['from']].append(edge['to'])
+
+    # For each requirement, check if any test node is connected
     req_nodes = {nid: n for nid, n in nodes.items() if n['phase'] == 'requirement'}
     coverage = {}
 
     for req_id, req_node in req_nodes.items():
-        # BFS: find all nodes that have a path TO this requirement
+        # BFS: find all nodes connected to this requirement
         visited = set()
         queue = [req_id]
         visited.add(req_id)
@@ -354,17 +364,16 @@ def _calculate_coverage(nodes, edges):
 
         while queue:
             current = queue.pop(0)
-            # Check nodes that point TO current
-            for source in reverse_adj.get(current, []):
-                if source not in visited:
-                    visited.add(source)
-                    queue.append(source)
+            for neighbor in undirected_adj.get(current, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
                     # Check if this is a test node
-                    if source in nodes:
-                        if nodes[source].get('phase') == 'test':
-                            test_nodes_found.append(source)
-                        elif source.startswith('FILE:') and _is_test_file(source[5:]):
-                            test_nodes_found.append(source)
+                    if neighbor in nodes:
+                        if nodes[neighbor].get('phase') == 'test':
+                            test_nodes_found.append(neighbor)
+                        elif neighbor.startswith('FILE:') and _is_test_file(neighbor[5:]):
+                            test_nodes_found.append(neighbor)
 
         coverage[req_id] = {
             'risk': req_node.get('risk', 'UNKNOWN'),
@@ -487,6 +496,12 @@ def analyze_coverage(traceability: dict, config: dict,
     # Extract requirement nodes
     req_nodes = {nid: n for nid, n in nodes.items() if n['phase'] == 'requirement'}
 
+    # Build undirected adjacency once for all requirements
+    undirected_adj = defaultdict(list)
+    for edge in edges:
+        undirected_adj[edge['to']].append(edge['from'])
+        undirected_adj[edge['from']].append(edge['to'])
+
     for req_id, req_node in req_nodes.items():
         risk = req_node.get('risk', 'UNKNOWN')
         if risk == 'UNKNOWN':
@@ -500,27 +515,22 @@ def analyze_coverage(traceability: dict, config: dict,
         level_config = matrix.get(risk, {})
         required_tiers = set(level_config.get('required_tiers', []))
 
-        # Find all test nodes that can reach this requirement
+        # Find all test nodes connected to this requirement via undirected BFS
         test_tiers = set()
         queue = [req_id]
         visited = set([req_id])
         test_files = []
 
-        # Reverse BFS to find test nodes
-        reverse_adj = defaultdict(list)
-        for edge in edges:
-            reverse_adj[edge['to']].append(edge['from'])
-
         while queue:
             current = queue.pop(0)
-            for source in reverse_adj.get(current, []):
-                if source not in visited:
-                    visited.add(source)
-                    queue.append(source)
-                    if source in nodes and nodes[source].get('phase') == 'test':
-                        test_tiers.update(nodes[source].get('tiers', set()))
-                        if 'files' in nodes[source]:
-                            test_files.extend(nodes[source]['files'])
+            for neighbor in undirected_adj.get(current, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+                    if neighbor in nodes and nodes[neighbor].get('phase') == 'test':
+                        test_tiers.update(nodes[neighbor].get('tiers', set()))
+                        if 'files' in nodes[neighbor]:
+                            test_files.extend(nodes[neighbor]['files'])
 
         missing_tiers = required_tiers - test_tiers
         if missing_tiers:

@@ -307,6 +307,7 @@ def migrate_v2_to_v3(v2_annotations: Dict) -> Dict:
             req_id = f"REQ-{entity_id.split('-')[1]}"
             v3_annotations[entity_id]['edges'].append({
                 'type': 'satisfies',
+                'source': entity_id,
                 'target': req_id
             })
 
@@ -481,13 +482,14 @@ def generate_coverage_report(dag: TraceabilityDAG) -> str:
 
     req_nodes = [n for n in dag.nodes.values() if n.id.startswith('REQ-')]
 
-    for req in sorted(req_nodes):
+    for req in sorted(req_nodes, key=lambda n: n.id):
         is_covered = dag.is_covered(req.id)
         status = "✓ COVERED" if is_covered else "✗ NOT COVERED"
 
         report += f"## {req.id}: {status}\n"
 
-        # Find all paths from REQ to TEST
+        # Find all paths from REQ to TEST (requires find_paths implementation)
+        # find_paths returns a list of lists of Nodes representing each path
         paths = dag.find_paths(req.id, target_phases=['TEST'])
         for path in paths:
             path_str = " → ".join([n.id for n in path])
