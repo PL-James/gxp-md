@@ -7,16 +7,19 @@ It defines a single file (GxP.MD) placed at a project root that instructs
 AI coding agents on GxP compliance requirements.
 
 ## Specification
-- [Full Specification](https://gxp.md/spec): The complete GxP.MD v2.1.0 standard
+- [Full Specification](https://gxp.md/spec): The complete GxP.MD v3.0.0 standard
 - [Getting Started](https://gxp.md/getting-started): How to add GxP.MD to your project
 - [Templates](https://gxp.md/templates): Downloadable starter files
 - [Regulatory Profiles](https://gxp.md/profiles): Pre-built compliance configurations
 
-## Key Concepts (v2.1.0)
+## Key Concepts (v3.0.0)
 - Annotation-first compliance — traceability lives in structured code annotations
 - Develop/Harden two-mode system — lightweight during development, formalized per sprint
 - Gate enforcement over process enforcement — defines what must be true, not how to work
-- V-Model driven development (REQ → US → SPEC → CODE → TEST → EVIDENCE)
+- DAG-based traceability — edge tags (@gxp-satisfies, @gxp-implements, @gxp-verifies, @gxp-derives-from) declare relationships as a directed acyclic graph
+- Opaque IDs — artifact identifiers (REQ-NNN, US-NNN, SPEC-NNN) carry no hierarchy; relationships are explicit via edge tags
+- Many-to-many relationships — a single source file may satisfy multiple requirements; a single test may verify multiple specs
+- Graph reachability coverage — traceability completeness is measured by reachability from requirements to tests through the DAG
 - Risk-proportionate enforcement (HIGH/MEDIUM/LOW)
 - ALCOA+ data integrity compliance (Contemporaneous = per-sprint harden)
 - ROSIE RFC-001 compatible artifact system

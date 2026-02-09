@@ -12,7 +12,7 @@ const jsonLd = {
 };
 
 const starterTemplate = `---
-gxpmd_version: "2.1.0"
+gxpmd_version: "3.0.0"
 
 project:
   name: "YOUR_PROJECT_NAME"
@@ -49,10 +49,11 @@ risk:
       review_required: false
 
 annotations:
-  schema_version: "1.0"
+  schema_version: "2.0"
   required_tags:
-    source: ["@gxp-req", "@gxp-spec", "@gxp-risk"]
-    test: ["@gxp-spec", "@trace", "@test-type", "@gxp-risk"]
+    source: ["@gxp-satisfies", "@gxp-implements", "@gxp-risk"]
+    test: ["@gxp-verifies", "@test-type", "@gxp-risk"]
+  edge_tags: ["@gxp-satisfies", "@gxp-implements", "@gxp-verifies", "@gxp-derives-from"]
   format: block_comment           # block_comment | decorator | companion_file
 
 artifacts:
@@ -64,7 +65,7 @@ artifacts:
 gates:
   pre_commit: [annotations_valid, no_untagged_gxp_code]
   pre_merge: [all_tests_pass, coverage_meets_threshold, review_complete_if_required, no_orphan_annotations]
-  per_release: [harden_sweep_complete, traceability_matrix_current, evidence_packages_complete]
+  per_release: [harden_sweep_complete, traceability_matrix_current, evidence_packages_complete, compliance_status_generated, risk_assessment_current]
 
 harden:
   frequency: per_sprint           # per_sprint | per_release | manual
@@ -74,11 +75,12 @@ agent:
   mode: risk_proportionate        # strict | risk_proportionate | advisory
 ---
 
-# GxP.MD -- Compliance Instructions for AI Coding Agents (v2)
+# GxP.MD -- Compliance Instructions for AI Coding Agents (v3)
 
 **This file is the compliance contract for this project.** An AI agent
 reading only this file has everything it needs to operate compliantly.
 Traceability lives in code annotations. Compliance is enforced at gates.
+No external documentation dependency.
 
 ---
 
@@ -96,13 +98,14 @@ When you begin a session on this project:
 ## 2. Annotation Schema
 
 Annotations are the source of truth for traceability. They live in code,
-move with code, and are reviewed with code.
+move with code, and are reviewed with code. Traceability is a directed
+acyclic graph (DAG) built via edge tags.
 
 Example (TypeScript):
 \\\`\\\`\\\`typescript
 /**
- * @gxp-req REQ-001 "Authenticate users via secure credential exchange"
- * @gxp-spec SPEC-001-001 "OAuth2 PKCE flow implementation"
+ * @gxp-satisfies REQ-001 "Authenticate users via secure credential exchange"
+ * @gxp-implements SPEC-001 "OAuth2 PKCE flow implementation"
  * @gxp-risk HIGH
  */
 export async function authenticateUser(creds: LoginCredentials) { }
@@ -150,7 +153,7 @@ system_boundary:
 const requirementTemplate = `---
 gxp_id: REQ-001                   # Sequential: REQ-001, REQ-002...
 title: "Requirement Title"
-parent_id: null                    # null for top-level requirements
+satisfies: []                      # Empty for top-level requirements
 description: |
   Detailed description of the requirement.
 risk_level: MEDIUM                 # HIGH | MEDIUM | LOW
@@ -172,9 +175,9 @@ validation_status: DRAFT
 [Risk level justification]`;
 
 const userStoryTemplate = `---
-gxp_id: US-001-001                # Format: US-{REQ}-{SEQ}
+gxp_id: US-001                    # Format: US-NNN (opaque)
 title: "User Story Title"
-parent_id: REQ-001                # Links to parent requirement
+satisfies: [REQ-001]              # Links to parent requirement(s)
 acceptance_criteria:
   - "Given [context], when [action], then [result]"
   - "Given [context], when [action], then [result]"
@@ -182,7 +185,7 @@ verification_tier: OQ             # IQ | OQ | PQ
 validation_status: DRAFT
 ---
 
-# US-001-001: User Story Title
+# US-{NNN}: User Story Title
 
 ## As a [role]
 I want [capability]
@@ -193,9 +196,10 @@ So that [benefit]
 2. Given [context], when [action], then [result]`;
 
 const specTemplate = `---
-gxp_id: SPEC-001-001              # Format: SPEC-{REQ}-{SEQ}
+gxp_id: SPEC-001                  # Format: SPEC-NNN (opaque)
 title: "Specification Title"
-parent_id: US-001-001             # Links to parent user story
+implements: [US-001]              # Links to parent user story(s)
+satisfies: [REQ-001]              # Links to parent requirement(s)
 verification_tier: OQ             # IQ | OQ | PQ
 design_approach: |
   Description of the implementation approach.
@@ -206,7 +210,7 @@ test_files:
 validation_status: DRAFT
 ---
 
-# SPEC-001-001: Specification Title
+# SPEC-{NNN}: Specification Title
 
 ## Design Approach
 [How this will be implemented]
@@ -219,10 +223,10 @@ validation_status: DRAFT
 
 const manifestTemplate = `{
   "@context": "https://gxp.md/evidence/v1",
-  "package_id": "OQ-SPEC-001-001-2026-02-07T120000Z",
-  "spec_id": "SPEC-001-001",
+  "package_id": "OQ-SPEC-001-2026-02-07T120000Z",
+  "spec_id": "SPEC-001",
   "tier": "OQ",
-  "traced_user_story": "US-001-001",
+  "traced_user_story": "US-001",
   "system_state_hash": "",
   "git_commit": "",
   "created_at": "",
@@ -293,7 +297,7 @@ const manifestTemplate = `{
 
       <TemplatePreview
         filename="user-story.md"
-        description="Template for .gxp/user_stories/US-XXX-XXX.md"
+        description="Template for .gxp/user_stories/US-NNN.md"
         language="yaml"
         content={userStoryTemplate}
         downloadPath="https://raw.githubusercontent.com/PL-James/gxp-md/main/templates/user-story.md"
@@ -301,7 +305,7 @@ const manifestTemplate = `{
 
       <TemplatePreview
         filename="specification.md"
-        description="Template for .gxp/specs/SPEC-XXX-XXX.md"
+        description="Template for .gxp/specs/SPEC-NNN.md"
         language="yaml"
         content={specTemplate}
         downloadPath="https://raw.githubusercontent.com/PL-James/gxp-md/main/templates/specification.md"
@@ -330,8 +334,8 @@ const manifestTemplate = `{
 │   ├── traceability-matrix.json   ← Generated during harden
 │   ├── compliance-status.md       ← Generated during harden
 │   ├── requirements/              ← OPTIONAL: REQ-NNN.md formal docs
-│   ├── user_stories/              ← OPTIONAL: US-NNN-NNN.md formal docs
-│   ├── specs/                     ← OPTIONAL: SPEC-NNN-NNN.md formal docs
+│   ├── user_stories/              ← OPTIONAL: US-NNN.md formal docs
+│   ├── specs/                     ← OPTIONAL: SPEC-NNN.md formal docs
 │   ├── adr/                       ← OPTIONAL: Architecture Decision Records
 │   └── evidence/                  ← Evidence packages (harden output)
 ├── src/                           ← Source code (with @gxp annotations)

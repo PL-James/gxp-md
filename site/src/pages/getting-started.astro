@@ -12,7 +12,7 @@ const jsonLd = {
 };
 
 const minimalGxpMd = `---
-gxpmd_version: "2.1.0"
+gxpmd_version: "3.0.0"
 
 project:
   name: "My Project"
@@ -26,10 +26,11 @@ risk:
   overall: MEDIUM
 
 annotations:
-  schema_version: "1.0"
+  schema_version: "2.0"
   required_tags:
-    source: ["@gxp-req", "@gxp-spec", "@gxp-risk"]
-    test: ["@gxp-spec", "@trace", "@test-type", "@gxp-risk"]
+    source: ["@gxp-satisfies", "@gxp-implements", "@gxp-risk"]
+    test: ["@gxp-verifies", "@test-type", "@gxp-risk"]
+  edge_tags: ["@gxp-satisfies", "@gxp-implements", "@gxp-verifies", "@gxp-derives-from"]
 
 artifacts:
   engine: rosie
@@ -54,7 +55,7 @@ agent:
 # Core Principles
 
 Annotations are the source of truth.
-Traceability lives in code, not separate docs.`;
+Traceability is a DAG built from edge tags.`;
 ---
 
 <Base
@@ -142,15 +143,15 @@ Traceability lives in code, not separate docs.`;
         <h2 class="text-2xl font-bold text-slate-900">Start developing with annotations</h2>
       </div>
       <p class="text-slate-600 mb-6">
-        GxP.MD v2 is annotation-first. Add compliance metadata directly to your code as structured comments. Your agent will guide you through the annotation format.
+        GxP.MD v3 is annotation-first. Add compliance metadata directly to your code as structured comments. Your agent will guide you through the annotation format.
       </p>
       <div class="rounded-lg border border-slate-200 overflow-hidden mb-4">
         <div class="flex items-center justify-between px-4 py-2 bg-slate-50 border-b border-slate-200">
           <span class="font-mono text-sm text-slate-600">src/auth/login.ts</span>
         </div>
         <pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-none border-none m-0"><code>{`/**
- * @gxp-req REQ-001 "User authentication"
- * @gxp-spec SPEC-001-001 "OAuth2 PKCE flow"
+ * @gxp-satisfies REQ-001 "User authentication"
+ * @gxp-implements SPEC-001 "OAuth2 PKCE flow"
  * @gxp-risk HIGH
  */
 export async function authenticateUser(credentials: LoginCredentials) {
@@ -162,8 +163,7 @@ export async function authenticateUser(credentials: LoginCredentials) {
           <span class="font-mono text-sm text-slate-600">tests/oq/auth/login.test.ts</span>
         </div>
         <pre class="p-4 text-sm overflow-x-auto bg-slate-950 text-slate-300 rounded-none border-none m-0"><code>{`/**
- * @gxp-spec SPEC-001-001
- * @trace US-001-001
+ * @gxp-verifies SPEC-001
  * @test-type OQ
  * @gxp-risk HIGH
  */
@@ -190,7 +190,7 @@ describe("User authentication", () => {
       <ul class="space-y-3 text-slate-600">
         <li class="flex items-start gap-3">
           <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          <span><strong>Traceability Matrix</strong> — Complete REQ → US → SPEC → CODE → TEST chains from annotations</span>
+          <span><strong>Traceability Matrix</strong> — Complete traceability DAG from annotations</span>
         </li>
         <li class="flex items-start gap-3">
           <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
@@ -202,7 +202,7 @@ describe("User authentication", () => {
         </li>
         <li class="flex items-start gap-3">
           <svg class="w-5 h-5 text-gxp-600 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
-          <span><strong>Gap Analysis</strong> — Missing annotations, incomplete chains, coverage shortfalls</span>
+          <span><strong>Gap Analysis</strong> — Missing annotations, orphan nodes, coverage shortfalls</span>
         </li>
       </ul>
       <p class="text-slate-600 mt-6">

@@ -1,7 +1,7 @@
 ---
-# GxP.MD v2.1.0 — Annotation-First Compliance for AI Coding Agents
+# GxP.MD v3.0.0 — Annotation-First Compliance for AI Coding Agents
 # Copyright 2026 James Gannon. Licensed under Apache 2.0.
-gxpmd_version: "2.1.0"
+gxpmd_version: "3.0.0"
 
 project:
   name: ""                    # Human-readable product name
@@ -46,17 +46,21 @@ risk:
       review_required: false
 
 annotations:
-  schema_version: "1.0"
+  schema_version: "2.0"
   required_tags:
     source:
-      - "@gxp-req"
-      - "@gxp-spec"
+      - "@gxp-satisfies"
+      - "@gxp-implements"
       - "@gxp-risk"
     test:
-      - "@gxp-spec"
-      - "@trace"
+      - "@gxp-verifies"
       - "@test-type"
       - "@gxp-risk"
+  edge_tags:
+    - "@gxp-satisfies"
+    - "@gxp-implements"
+    - "@gxp-verifies"
+    - "@gxp-derives-from"
   format: block_comment        # block_comment | decorator | companion_file
 
 artifacts:
@@ -125,19 +129,27 @@ agent:
 
 # GxP.MD Specification
 
-**Version 2.1.0**
+**Version 3.0.0**
 
 ## Abstract
 
-GxP.MD v2.1.0 is an annotation-first compliance instruction standard for AI coding agents operating on software systems subject to Good Practice (GxP) regulations in the pharmaceutical and life sciences industries.
+GxP.MD v3.0.0 is an annotation-first compliance instruction standard for AI coding agents operating on software systems subject to Good Practice (GxP) regulations in the pharmaceutical and life sciences industries.
 
 A GxP.MD file is a single markdown document placed at the root of a software project. It contains machine-readable configuration in YAML frontmatter and human-readable behavioral directives in the markdown body. AI agents discover this file by convention, parse the configuration to understand the regulatory context, and follow the directives to produce compliant code, annotations, tests, and evidence.
 
-Version 2.0.0 introduced three foundational changes from v1:
+Version 3.0.0 introduces a graph-based traceability model replacing the hierarchical ID scheme from v2:
 
-1. **Compliance-as-Code.** Traceability lives in structured code annotations during active development, not in a parallel documentation system. Separate artifact files are optional depth for complex or high-risk components.
-2. **Gate Enforcement Over Process Enforcement.** The specification defines what must be true at each quality gate, not how the agent must work. Agents are free to code first and annotate later, or plan first and code later, as long as gates pass.
-3. **Two-Mode System.** Development operates in `develop` mode (lightweight, annotation-driven) or `harden` mode (per-sprint compliance formalization). There is no separate audit mode. Harden IS audit-readiness, and it runs every sprint.
+1. **Traceability is a Directed Acyclic Graph (DAG).** IDs are opaque identifiers (e.g., `REQ-001`, `SPEC-042`). Relationships are declared explicitly via edge tags (`@gxp-satisfies`, `@gxp-implements`, `@gxp-verifies`, `@gxp-derives-from`), not inferred from ID structure. Many-to-many relationships are natural and unrestricted.
+
+2. **Edge Tags Replace ID-Scheme Inference.** In v2, `US-001-001` was interpreted as belonging to `REQ-001` based on the ID format. In v3, an explicit `@gxp-satisfies REQ-001` edge tag declares the relationship. This decouples ID assignment from traceability, making the system more flexible and auditable.
+
+3. **Coverage is Graph Reachability.** A requirement is covered if there exists a path from that requirement through the edge graph to a passing test. A LOW-risk component with no parent requirement but with SPEC → CODE → TEST can proceed; traceability is not a chain but a reachable path in a DAG.
+
+GxP.MD v3 retains all foundational principles from v2 and earlier:
+
+- **Compliance-as-Code.** Traceability lives in structured code annotations during active development.
+- **Gate Enforcement Over Process Enforcement.** Agents are free to code first or annotate first; gates enforce what must be true, not how to arrive there.
+- **Two-Mode System.** Development operates in `develop` mode (lightweight) or `harden` mode (per-sprint formalization).
 
 GxP.MD builds on the ROSIE RFC-001 artifact and evidence standard but does not require it. Projects using ROSIE tooling benefit from automated enforcement; projects without ROSIE enforce compliance through CI gates and manual review.
 
@@ -149,42 +161,44 @@ The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT", "SHOULD", "S
 
 ### 1.1 Traceability is Law
 
-The V-Model defines the shape of traceability in GxP-regulated software. Every piece of production code traces backward through a specification, a user story, and a requirement. Every test traces forward to the specification it verifies. The chain is:
+The V-Model defines the shape of traceability in GxP-regulated software. Every piece of production code traces backward through a specification, a user story, and a requirement. Every test traces forward to the specification it verifies. Relationships are expressed as a directed acyclic graph (DAG):
 
 ```
-REQ  -->  US  -->  SPEC  -->  SOURCE CODE  -->  TEST  -->  EVIDENCE
+REQ ──satisfies──▶ US ──implements──▶ SPEC ──implements──▶ CODE ──verifies──▶ TEST ──produces──▶ EVIDENCE
+ │                  │                   │                    ▲                  ▲
+ └──satisfies───────┴───implements──────┴────────────────────┘──────verifies────┘
+                         (many-to-many edges allowed)
 ```
 
-This chain MUST be complete for all GxP-relevant functionality. However, HOW this chain is maintained is flexible. In GxP.MD v2, traceability lives primarily in structured code annotations rather than in separate artifact files. The V-Model defines the required relationships; annotations express them.
+In v3, relationships are explicit edges with declared types. The V-Model phases remain the same, but the connections are not inferred from ID structure.
 
-The V-Model phases remain:
+The V-Model phases are:
 
-1. **Requirements** define WHAT the system must do. Each requirement receives a unique `REQ-{NNN}` identifier.
-2. **User Stories** define WHO needs the capability and WHY. Each user story receives a `US-{NNN}-{NNN}` identifier linking it to its parent requirement.
-3. **Specifications** define HOW each user story will be implemented. Each specification receives a `SPEC-{NNN}-{NNN}` identifier linking it to its parent user story.
-4. **Implementation** is the source code itself. Source files carry `@gxp-req`, `@gxp-spec`, and `@gxp-risk` annotations linking them to their governing artifacts.
-5. **Verification** proves that the implementation satisfies its specification. Tests carry `@gxp-spec`, `@trace`, `@test-type`, and `@gxp-risk` annotations and produce evidence packages.
+1. **Requirements** define WHAT the system must do. Each requirement receives a unique opaque `REQ-{NNN}` identifier.
+2. **User Stories** define WHO needs the capability and WHY. Each user story receives an opaque `US-{NNN}` identifier (NOT hierarchically encoded).
+3. **Specifications** define HOW each requirement will be implemented. Each specification receives an opaque `SPEC-{NNN}` identifier (NOT hierarchically encoded).
+4. **Implementation** is the source code itself. Source files carry `@gxp-satisfies` and/or `@gxp-implements` edge tags linking them to their governing artifacts, plus `@gxp-risk` annotations.
+5. **Verification** proves that the implementation satisfies its specification. Tests carry `@gxp-verifies` edge tags linking to governing specs, plus `@test-type` and `@gxp-risk` annotations.
 
 A complete annotation chain looks like this:
 
 ```typescript
 // In src/auth/login.ts:
 /**
- * @gxp-req REQ-001 "System shall authenticate users via secure credential exchange"
- * @gxp-spec SPEC-001-001 "OAuth2 PKCE flow implementation"
+ * @gxp-satisfies REQ-001
+ * @gxp-implements SPEC-042
  * @gxp-risk HIGH
  */
 
 // In tests/oq/auth/login.test.ts:
 /**
- * @gxp-spec SPEC-001-001
- * @trace US-001-001
+ * @gxp-verifies SPEC-042
  * @test-type OQ
  * @gxp-risk HIGH
  */
 ```
 
-REQ-001 is the requirement. US-001-001 is the user story derived from it. SPEC-001-001 is the specification derived from the user story. The source file implements SPEC-001-001 and declares its governing requirement. The test file verifies SPEC-001-001 and traces to US-001-001. The chain is complete.
+The source file declares it satisfies `REQ-001` and implements `SPEC-042` via explicit edge tags. The test file declares it verifies `SPEC-042`. The edges form a directed path: REQ-001 is reachable from the test through the graph. Coverage is verified by checking reachability.
 
 ### 1.2 Annotations are Source of Truth
 
@@ -202,7 +216,7 @@ An agent MUST NOT maintain a parallel documentation system that duplicates what 
 
 ### 1.3 Gates Over Process
 
-GxP.MD v2 does NOT prescribe a development workflow. It does not say "before writing code, create a specification file." It says "before merging, all code must have valid annotations and passing tests."
+GxP.MD v3 does NOT prescribe a development workflow. It does not say "before writing code, create a specification file." It says "before merging, all code must have valid annotations and passing tests."
 
 Compliance is enforced at three gate levels:
 
@@ -256,7 +270,7 @@ Agents that cannot fulfill a MUST-level directive SHOULD halt and report the gap
 
 ## 2. Annotation Schema
 
-Annotations are the core mechanism by which GxP.MD v2 maintains traceability. This section defines the annotation tags, their syntax, and their placement rules.
+Annotations are the core mechanism by which GxP.MD v3 maintains traceability. This section defines the annotation tags, their syntax, and their placement rules.
 
 ### 2.1 What Is GxP-Relevant Code?
 
@@ -264,21 +278,23 @@ Code is GxP-relevant if it processes, stores, or transmits regulated data, imple
 
 ### 2.2 Source File Annotations
 
-Every source file implementing GxP-relevant logic MUST include annotations linking it to the governing requirements, specifications, and risk level.
+Every source file implementing GxP-relevant logic MUST include annotations linking it to the artifacts it satisfies or implements, and its risk level.
 
-#### Required Tags
+#### Required Tags (At Least One Edge Tag)
 
 | Tag | Format | Description |
 |-----|--------|-------------|
-| `@gxp-req` | `@gxp-req REQ-NNN` or `@gxp-req REQ-NNN "description"` | Links the source file to its governing requirement |
-| `@gxp-spec` | `@gxp-spec SPEC-NNN-NNN` or `@gxp-spec SPEC-NNN-NNN "description"` | Links the source file to its governing specification |
-| `@gxp-risk` | `@gxp-risk HIGH\|MEDIUM\|LOW` | Declares the risk classification of the component |
+| `@gxp-satisfies` | `@gxp-satisfies REQ-NNN[, REQ-NNN, ...]` | Links to requirement(s) this code satisfies. Many-to-many allowed. |
+| `@gxp-implements` | `@gxp-implements US-NNN[, SPEC-NNN, ...]` | Links to user story(ies) or specification(s) this code implements. Many-to-many allowed. |
+| `@gxp-risk` | `@gxp-risk HIGH\|MEDIUM\|LOW` | Declares the risk classification of the component. |
+
+**At least one of `@gxp-satisfies` or `@gxp-implements` MUST be present in every annotated source file.**
 
 #### Optional Tags
 
 | Tag | Format | Description |
 |-----|--------|-------------|
-| `@gxp-story` | `@gxp-story US-NNN-NNN` | Links the source file to a user story |
+| `@gxp-derives-from` | `@gxp-derives-from SPEC-NNN[, SPEC-NNN, ...]` | Indicates upstream dependencies or base specifications. Useful for tracing inheritance chains. |
 
 #### Format Examples
 
@@ -286,8 +302,8 @@ Every source file implementing GxP-relevant logic MUST include annotations linki
 
 ```typescript
 /**
- * @gxp-req REQ-001 "System shall authenticate users via secure credential exchange"
- * @gxp-spec SPEC-001-001 "OAuth2 PKCE flow implementation"
+ * @gxp-satisfies REQ-001, REQ-003
+ * @gxp-implements SPEC-042
  * @gxp-risk HIGH
  */
 export async function authenticateUser(credentials: LoginCredentials): Promise<AuthResult> {
@@ -298,8 +314,8 @@ export async function authenticateUser(credentials: LoginCredentials): Promise<A
 **Python:**
 
 ```python
-# @gxp-req REQ-003 "System shall validate batch records against schema"
-# @gxp-spec SPEC-003-001 "JSON Schema validation for batch payloads"
+# @gxp-satisfies REQ-003
+# @gxp-implements SPEC-015
 # @gxp-risk MEDIUM
 def validate_batch_record(record: dict, schema: dict) -> ValidationResult:
     # implementation
@@ -309,8 +325,7 @@ def validate_batch_record(record: dict, schema: dict) -> ValidationResult:
 
 ```
 /*
- * @gxp-req REQ-005 "System shall encrypt PHI at rest"
- * @gxp-spec SPEC-005-001 "AES-256-GCM encryption for database fields"
+ * @gxp-implements SPEC-005, SPEC-006
  * @gxp-risk HIGH
  */
 ```
@@ -320,27 +335,25 @@ def validate_batch_record(record: dict, schema: dict) -> ValidationResult:
 - Tags MUST appear in a block comment at the top of the file or immediately preceding the function, class, or module they govern.
 - A single file MAY contain multiple annotation blocks if it implements multiple specifications. Each block governs the code that immediately follows it.
 - Tags MUST use the exact format specified. Deviations (e.g., missing hyphens, incorrect casing of risk levels) will cause annotation validation failures at the pre-commit gate.
-- The optional description string in `@gxp-req` and `@gxp-spec` SHOULD be included for readability but is not required. When omitted, the ID alone is sufficient for traceability.
+- When multiple IDs are listed, they are comma-separated with no spaces inside the tag value: `@gxp-satisfies REQ-001, REQ-003, REQ-005`.
 
 ### 2.3 Test File Annotations
 
-Every test file verifying GxP-relevant functionality MUST include annotations linking it to the specification it verifies, the traceability chain, and the risk level.
+Every test file verifying GxP-relevant functionality MUST include annotations linking it to the specification(s) it verifies and the risk level.
 
 #### Required Tags
 
 | Tag | Format | Description |
 |-----|--------|-------------|
-| `@gxp-spec` | `@gxp-spec SPEC-NNN-NNN` | Links the test to the specification it verifies |
-| `@trace` | `@trace US-NNN-NNN` | Links the test to the user story it validates |
-| `@test-type` | `@test-type IQ\|OQ\|PQ` | Declares the verification tier |
-| `@gxp-risk` | `@gxp-risk HIGH\|MEDIUM\|LOW` | Declares the risk level of the tested component |
+| `@gxp-verifies` | `@gxp-verifies SPEC-NNN[, SPEC-NNN, ...]` | Links test to spec(s) it verifies. Many-to-many allowed. |
+| `@test-type` | `@test-type IQ\|OQ\|PQ` | Declares the verification tier. |
+| `@gxp-risk` | `@gxp-risk HIGH\|MEDIUM\|LOW` | Declares the risk level of the tested component. |
 
 #### Example (TypeScript / Vitest)
 
 ```typescript
 /**
- * @gxp-spec SPEC-001-001
- * @trace US-001-001
+ * @gxp-verifies SPEC-042, SPEC-043
  * @test-type OQ
  * @gxp-risk HIGH
  */
@@ -364,58 +377,93 @@ describe("User authentication - OAuth2 PKCE login flow", () => {
 - Tags MUST appear in a block comment at the top of the test file or immediately preceding the `describe` block they govern.
 - A single test file MAY contain multiple tag blocks if it covers multiple specifications. Each block governs the `describe` block that immediately follows it.
 
-### 2.4 The Traceability Chain Through Annotations
+### 2.4 The Traceability Graph
 
-Annotations form the V-Model traceability chain without requiring separate artifact files. The chain works as follows:
+In v3, traceability is a directed acyclic graph (DAG) built from explicit edge tags. Unlike v2, IDs do not encode hierarchy. A specification ID is simply a unique identifier; its parent requirement is declared via an explicit edge tag, not inferred from the ID structure.
+
+**Key differences from v2:**
+
+1. **IDs are opaque.** `REQ-001`, `US-042`, `SPEC-137` — the numbers do NOT imply parentage or hierarchy. To know that a User Story belongs to a Requirement, you must see an explicit edge tag.
+
+2. **Edge tags declare relationships explicitly:**
+   - `@gxp-satisfies REQ-NNN` — "this satisfies requirement NNN"
+   - `@gxp-implements US-NNN, SPEC-NNN` — "this implements user story/spec NNN"
+   - `@gxp-verifies SPEC-NNN` — "this test verifies spec NNN"
+   - `@gxp-derives-from SPEC-NNN` — "this depends on or extends spec NNN"
+
+3. **Many-to-many is natural.** A source file can satisfy multiple requirements and implement multiple specs. A test can verify multiple specs. No ID scheme limits are needed.
+
+4. **Coverage is graph reachability.** A requirement is covered if there exists a path in the graph from that requirement to a passing test. A specification is covered if there exists a path from the spec to a passing test. This model naturally handles components with no parent requirement (e.g., a LOW-risk utility spec) as long as they have test coverage.
+
+5. **Skipped phases produce shorter paths, not errors.** A LOW-risk component with SPEC → CODE → TEST (no explicit REQ or US) is valid traceability. The chain exists; it is just shorter. This is not a gap — it is risk-proportionate flexibility.
+
+#### Example Graph
 
 ```
-Source file (src/auth/login.ts):
-  @gxp-req REQ-001           --> Requirement: "System shall authenticate users"
-  @gxp-spec SPEC-001-001     --> Specification: "OAuth2 PKCE flow"
-  @gxp-risk HIGH              --> Risk classification
+REQ-001 "User authentication"
+  ├── [satisfies] → SPEC-042 "OAuth2 PKCE flow"
+  │                   ├── [implements] → src/auth/login.ts
+  │                   │                   └── [verifies] ← tests/oq/auth/login.test.ts
+  │                   └── [implements] → src/auth/session.ts
+  │                                       └── [verifies] ← tests/oq/auth/session.test.ts
+  └── [satisfies] → SPEC-043 "Session refresh"
+                       └── [implements] → src/auth/refresh.ts
+                                           └── [verifies] ← tests/pq/auth/refresh.e2e.ts
 
-Test file (tests/oq/auth/login.test.ts):
-  @gxp-spec SPEC-001-001     --> Verifies the same specification
-  @trace US-001-001           --> Traces to user story
-  @test-type OQ               --> Verification tier
-  @gxp-risk HIGH              --> Risk classification
+REQ-002 "Audit trail logging" (no explicit US, short path)
+  └── [satisfies] → SPEC-050 "Audit event capture"
+                       └── [implements] → src/audit/logger.ts
+                                           └── [verifies] ← tests/oq/audit/logger.test.ts
 ```
-
-The chain reads: REQ-001 is the governing requirement. US-001-001 is a user story derived from REQ-001 (the relationship is implicit in the ID scheme: US-001-xxx belongs to REQ-001). SPEC-001-001 is the specification derived from US-001-001 (SPEC-001-xxx belongs to US-001-xxx, which belongs to REQ-001). The source file declares it implements REQ-001 and SPEC-001-001. The test file declares it verifies SPEC-001-001 and traces to US-001-001.
 
 When `traceability_enforcement` is set to `strict`:
 
-- Every source file containing GxP-relevant logic MUST include at least `@gxp-spec` and `@gxp-risk` annotations.
-- Every test file MUST include `@gxp-spec`, `@trace`, `@test-type`, and `@gxp-risk` annotations.
-- No annotation MAY reference an ID that has no corresponding source file, test file, or formal artifact file.
-- The traceability matrix generated during harden mode MUST resolve every annotation to a complete chain.
+- Every source file containing GxP-relevant logic MUST include at least one of `@gxp-satisfies` or `@gxp-implements`.
+- Every test file MUST include `@gxp-verifies`, `@test-type`, and `@gxp-risk` annotations.
+- No edge tag MAY reference an ID that has no corresponding source file, test file, or formal artifact file.
+- The traceability matrix generated during harden mode MUST resolve every edge to a valid target and verify graph acyclicity.
 
 When `traceability_enforcement` is set to `warn`, violations produce warnings but do not block workflow progression. When set to `off`, traceability is not enforced.
 
 #### Assigning New IDs
 
-To assign a new ID, scan existing annotations across the codebase for the highest sequence number and increment. For example, if the highest existing requirement is `REQ-012`, the next is `REQ-013`. Within a requirement, if the highest specification is `SPEC-012-003`, the next is `SPEC-012-004`. Always verify by searching: `grep -rn "@gxp-req\|@gxp-spec\|@trace" src/ tests/`
+IDs are now fully opaque. To assign a new ID:
+
+1. **Scan existing annotations** across the codebase for the highest sequence number in each phase prefix:
+   - For requirements: `grep -rn "@gxp-satisfies\|@gxp-implements" src/ tests/ | grep "REQ-"` to find all REQ IDs
+   - For user stories: search for `US-` IDs
+   - For specifications: search for `SPEC-` IDs
+
+2. **Increment by 1.** If the highest requirement is `REQ-012`, the next is `REQ-013`. User stories and specifications have independent sequences. If the highest spec is `SPEC-089`, the next is `SPEC-090`.
+
+3. **Verify via grep** to avoid conflicts: `grep -rn "REQ-090\|US-045\|SPEC-091" src/ tests/ .gxp/`
+
+**Example ID assignment:**
+- Current state: REQ-001...REQ-012, US-001...US-034, SPEC-001...SPEC-089
+- New requirement: REQ-013
+- New user story: US-035
+- New specification: SPEC-090
 
 ### 2.6 When to Use Formal Artifact Files
 
 Annotations are the primary traceability mechanism, but formal artifact files in `.gxp/` provide additional depth when the complexity or risk of a component warrants it.
 
 **Requirements (`REQ-NNN.md`): RECOMMENDED for HIGH risk.**
-Requirements define WHAT the system must do. This conceptually exists before code — regulatory obligations, business rules, and quality attributes have a source independent of implementation. A separate `REQ-NNN.md` in `.gxp/requirements/` provides space for:
+Requirements define WHAT the system must do. A separate `REQ-NNN.md` in `.gxp/requirements/` provides space for:
 - Regulatory basis and citations
 - Detailed acceptance criteria
 - Risk justification and impact analysis
 - Relationship to other requirements
 
-For LOW and MEDIUM risk components, the `@gxp-req REQ-NNN "description"` annotation in source code is sufficient. The requirement exists; it is simply expressed inline.
+For LOW and MEDIUM risk components, the `@gxp-satisfies REQ-NNN` annotation in source code is sufficient.
 
-**User Stories (`US-NNN-NNN.md`): OPTIONAL.**
-For many teams, the ticket, issue, or backlog item combined with the `@trace US-NNN-NNN` annotation in test files provides sufficient traceability. A separate user story file adds value when detailed acceptance criteria or given/when/then scenarios need formal documentation.
+**User Stories (`US-NNN.md`): OPTIONAL.**
+For many teams, the ticket, issue, or backlog item combined with the `@gxp-implements` annotation in source files provides sufficient traceability. A separate user story file adds value when detailed acceptance criteria or given/when/then scenarios need formal documentation.
 
-**Specifications (`SPEC-NNN-NNN.md`): OPTIONAL for LOW/MEDIUM risk.**
-For HIGH risk components with complex design rationale, a separate `SPEC-NNN-NNN.md` in `.gxp/specs/` adds value by documenting design approach, data flows, security considerations, and API contracts. For simple features at LOW or MEDIUM risk, the annotation description combined with the code itself IS the specification.
+**Specifications (`SPEC-NNN.md`): OPTIONAL for LOW/MEDIUM risk.**
+For HIGH risk components with complex design rationale, a separate `SPEC-NNN.md` in `.gxp/specs/` adds value. For simple features at LOW or MEDIUM risk, the annotation description combined with the code itself IS the specification.
 
-**Harden mode generates stub formal documents from annotations when separate files do not exist** (see Section 4.2, Step 5). Stubs contain the annotation-derived metadata (ID, description, risk level, linked files) and are marked `validation_status: draft`. This ensures the compliance record is always complete at sprint boundaries, regardless of whether the team maintains formal artifact files during development.
+**Harden mode generates stub formal documents from annotations when separate files do not exist** (see Section 4.2, Step 5). Stubs contain the annotation-derived metadata and are marked `validation_status: draft`. This ensures the compliance record is always complete at sprint boundaries, regardless of whether the team maintains formal artifact files during development.
 
 ---
 
@@ -431,7 +479,7 @@ When an AI agent begins a development session on a project containing a GxP.MD f
 2. **Read `.gxp/system_context.md`** if it exists, to understand system description, boundaries, and intended use.
 3. **Understand the risk level** of the area being modified. Check the risk matrix and any component-level risk annotations already present in the code.
 
-If resuming work on an existing project, the agent SHOULD scan for existing annotation IDs (e.g., `grep -r "@gxp-req" src/`) to understand the current traceability state and avoid ID conflicts when assigning new IDs.
+If resuming work on an existing project, the agent SHOULD scan for existing annotation IDs (e.g., `grep -r "@gxp-satisfies\|@gxp-implements" src/`) to understand the current traceability state and avoid ID conflicts when assigning new IDs.
 
 The agent SHOULD report any noteworthy findings (e.g., a component marked HIGH risk, an incomplete annotation chain in the area being modified) to the human operator before proceeding.
 
@@ -441,7 +489,7 @@ The session start protocol is intentionally minimal. The agent does not need to 
 
 While writing implementation code, the agent MUST:
 
-1. **Add annotations.** Every source file implementing GxP-relevant logic MUST include `@gxp-req`, `@gxp-spec`, and `@gxp-risk` annotations as defined in Section 2.1. Annotations MAY be added during coding or immediately after, as long as they are present before the pre-commit gate runs.
+1. **Add annotations.** Every source file implementing GxP-relevant logic MUST include at least one of `@gxp-satisfies` or `@gxp-implements`, plus `@gxp-risk` annotations as defined in Section 2.2. Annotations MAY be added during coding or immediately after, as long as they are present before the pre-commit gate runs.
 
 2. **Risk-assess the component.** Determine the risk level (HIGH, MEDIUM, LOW) of the component being modified based on the risk taxonomy in Section 1.4. Apply the enforcement rules corresponding to that risk level.
 
@@ -457,7 +505,7 @@ The agent is NOT required to:
 
 ### 3.3 Writing Tests
 
-Tests are the verification arm of the traceability chain. All test files for GxP-relevant functionality MUST include the annotations defined in Section 2.2.
+Tests are the verification arm of the traceability chain. All test files for GxP-relevant functionality MUST include the annotations defined in Section 2.3.
 
 Tests MUST be organized by verification tier in the project's test directory structure:
 
@@ -516,8 +564,8 @@ Gates are the primary compliance enforcement mechanism. They validate that the c
 
 Checked before every commit. These gates ensure annotation hygiene at the individual change level.
 
-- **Annotations valid.** All `@gxp-req`, `@gxp-spec`, `@gxp-risk`, `@gxp-story`, `@trace`, and `@test-type` annotations in modified files conform to the formats defined in Section 2. Syntactically invalid annotations block the commit.
-- **No untagged GxP code.** All modified source files containing GxP-relevant logic include at least `@gxp-spec` and `@gxp-risk` annotations. A source file that implements regulated functionality without annotations is non-compliant.
+- **Annotations valid.** All `@gxp-satisfies`, `@gxp-implements`, `@gxp-verifies`, `@gxp-risk`, `@gxp-derives-from`, and `@test-type` annotations in modified files conform to the formats defined in Section 2. Syntactically invalid annotations block the commit.
+- **No untagged GxP code.** All modified source files containing GxP-relevant logic include at least one of `@gxp-satisfies` or `@gxp-implements`, plus `@gxp-risk` annotations. A source file that implements regulated functionality without these annotations is non-compliant.
 
 #### Pre-Merge Gate
 
@@ -526,7 +574,7 @@ Checked before merging a feature branch into the main branch. These gates ensure
 - **All tests pass.** All tests for the affected components across all required verification tiers (as defined by the risk matrix) execute successfully. Zero failures.
 - **Coverage meets threshold.** Test coverage for every modified component meets or exceeds the threshold defined for its risk level in the risk matrix.
 - **Review complete if required.** For components where `review_required` is `true` at the component's risk level, at least one qualified reviewer has approved the changes.
-- **No orphan annotations.** All annotation IDs in modified files resolve to either (a) a corresponding annotation in another file (e.g., a `@gxp-spec` in a source file has a matching `@gxp-spec` in a test file) or (b) a formal artifact file in `.gxp/`. An annotation referencing a non-existent ID is orphaned and blocks the merge.
+- **No orphan annotations.** All annotation IDs in modified files resolve to either (a) a corresponding annotation in another file (e.g., a `@gxp-verifies` in a test file has matching source files or formal artifact files it references) or (b) a formal artifact file in `.gxp/`. An annotation referencing a non-existent ID is orphaned and blocks the merge.
 
 If any gate fails, the agent MUST NOT proceed. The agent MUST identify the failure, propose a remediation, and re-attempt after fixing the issue.
 
@@ -564,19 +612,20 @@ Parse all source and test files in the project. Validate that:
 - No GxP-relevant source files lack annotations.
 - Risk classifications are consistent (a source file and its test file declare the same risk level).
 
-**Step 2: Traceability Matrix Generation**
-Build the complete REQ → US → SPEC → CODE → TEST chain from:
-- Annotations in source files and test files.
+**Step 2: Traceability DAG Construction**
+Build the traceability DAG from:
+- Edge tags in source files (`@gxp-satisfies`, `@gxp-implements`, `@gxp-derives-from`) and test files (`@gxp-verifies`).
 - Formal artifact files in `.gxp/requirements/`, `.gxp/user_stories/`, and `.gxp/specs/` (if they exist).
-- ID scheme relationships (US-001-xxx belongs to REQ-001; SPEC-001-xxx belongs to US-001-xxx).
+- Verify the graph is acyclic. Circular edges are an error.
 
 Output the result to `.gxp/traceability-matrix.json` (format defined in Section 4.3).
 
 **Step 3: Coverage Analysis**
-For each component in the traceability matrix:
+For each node in the traceability DAG:
 - Verify that test coverage meets or exceeds the threshold defined for its risk level.
 - Verify that all required verification tiers (per the risk matrix) have corresponding test files with passing results.
-- Flag components below threshold.
+- Compute reachability: for each requirement, check if there exists a path to a passing test.
+- Flag components below threshold or with broken paths.
 
 **Step 4: Evidence Formalization**
 Collect CI test outputs from the current sprint or release cycle. Organize them into evidence packages in `.gxp/evidence/` following the structure defined in Section 4.5. Each evidence package is self-contained and includes metadata, environment snapshot, test output, and manifest.
@@ -584,76 +633,66 @@ Collect CI test outputs from the current sprint or release cycle. Organize them 
 **Step 5: Artifact Stub Generation**
 For each requirement and specification discovered through annotations that does NOT have a corresponding formal artifact file in `.gxp/`:
 - Generate a stub `REQ-NNN.md` in `.gxp/requirements/` with the annotation description, risk level, linked specifications, and `validation_status: draft`.
-- Generate a stub `SPEC-NNN-NNN.md` in `.gxp/specs/` with the annotation description, linked source and test files, and `validation_status: draft`.
+- Generate a stub `SPEC-NNN.md` in `.gxp/specs/` with the annotation description, linked source and test files, and `validation_status: draft`.
 
 Stubs are generated only when formal files do not already exist. Existing formal files are never overwritten. Stubs provide the minimum formal artifact record; teams MAY flesh them out with additional detail for HIGH risk components.
 
 **Step 6: Gap Analysis**
 Identify and report:
 - Missing annotations (GxP-relevant code without annotations).
-- Incomplete traceability chains (a REQ with no corresponding SPEC, a SPEC with no corresponding test).
+- Incomplete traceability paths (a REQ with no path to a passing test, a SPEC with no test coverage).
 - Coverage shortfalls (components below their risk-level threshold).
 - Missing evidence (test results that were not captured or formalized).
 - Stale annotations (annotations referencing deleted or renamed artifacts).
+- Graph cycles (circular edges, which are errors).
 
 **Step 7: Compliance Status Report**
 Generate `.gxp/compliance-status.md` (format defined in Section 4.4) summarizing the compliance state.
 
 ### 4.3 Traceability Matrix Format
 
-The traceability matrix is generated during harden mode and stored at `.gxp/traceability-matrix.json`. It is the machine-readable record of the complete V-Model chain.
+The traceability matrix is generated during harden mode and stored at `.gxp/traceability-matrix.json`. It is the machine-readable record of the complete V-Model graph.
 
 ```json
 {
-  "gxpmd_version": "2.1.0",
-  "generated_at": "2026-02-07T14:30:00Z",
+  "gxpmd_version": "3.0.0",
+  "generated_at": "2026-02-09T14:30:00Z",
   "sprint": "2026-S03",
   "summary": {
-    "total_chains": 12,
-    "complete_chains": 11,
-    "incomplete_chains": 1,
-    "total_source_files": 34,
-    "annotated_source_files": 34,
-    "total_test_files": 48,
-    "annotated_test_files": 48
+    "total_nodes": 42,
+    "total_edges": 67,
+    "total_requirements": 7,
+    "covered_requirements": 7,
+    "coverage_by_risk": {
+      "HIGH": { "total": 3, "covered": 3, "percentage": 100 },
+      "MEDIUM": { "total": 2, "covered": 2, "percentage": 100 },
+      "LOW": { "total": 2, "covered": 2, "percentage": 100 }
+    }
   },
-  "chains": [
-    {
-      "requirement": "REQ-001",
-      "requirement_title": "System shall authenticate users via secure credential exchange",
-      "user_stories": ["US-001-001", "US-001-002"],
-      "specifications": ["SPEC-001-001", "SPEC-001-002"],
-      "source_files": [
-        "src/auth/login.ts",
-        "src/auth/session.ts"
-      ],
-      "test_files": [
-        "tests/oq/auth/login.test.ts",
-        "tests/oq/auth/session.test.ts",
-        "tests/pq/auth/login.e2e.ts"
-      ],
-      "risk_level": "HIGH",
-      "coverage": 97.2,
-      "required_tiers": ["IQ", "OQ", "PQ"],
-      "covered_tiers": ["OQ", "PQ"],
-      "status": "complete",
-      "has_formal_artifacts": true
-    }
+  "nodes": [
+    { "id": "REQ-001", "phase": "requirement", "risk": "HIGH", "title": "User authentication", "files": [], "covered": true },
+    { "id": "US-042", "phase": "user_story", "risk": "HIGH", "title": "User login with OAuth2", "files": [], "covered": true },
+    { "id": "SPEC-042", "phase": "specification", "risk": "HIGH", "title": "OAuth2 PKCE flow", "files": ["src/auth/login.ts"], "covered": true },
+    { "id": "TEST-OQ-auth-login", "phase": "test", "risk": "HIGH", "title": "User authentication - OAuth2 PKCE", "files": ["tests/oq/auth/login.test.ts"], "covered": true }
   ],
-  "gaps": [
-    {
-      "type": "missing_tier",
-      "chain": "REQ-002",
-      "detail": "IQ tier required for HIGH risk but no IQ test files found",
-      "severity": "HIGH"
+  "edges": [
+    { "from": "REQ-001", "to": "US-042", "type": "derives", "source_file": null },
+    { "from": "US-042", "to": "SPEC-042", "type": "implements", "source_file": null },
+    { "from": "SPEC-042", "to": "src/auth/login.ts", "type": "implements", "source_file": "src/auth/login.ts" },
+    { "from": "tests/oq/auth/login.test.ts", "to": "SPEC-042", "type": "verifies", "source_file": "tests/oq/auth/login.test.ts" }
+  ],
+  "coverage": {
+    "REQ-001": {
+      "risk": "HIGH",
+      "paths": [["REQ-001", "US-042", "SPEC-042", "src/auth/login.ts", "tests/oq/auth/login.test.ts"]],
+      "covered": true
     }
-  ]
+  },
+  "gaps": []
 }
 ```
 
-The `chains` array contains one entry per requirement. Each entry lists all downstream artifacts (user stories, specifications, source files, test files) discovered through annotations and formal artifact files. The `status` field is `complete` when all required tiers have passing tests at or above the coverage threshold, and `incomplete` otherwise.
-
-The `gaps` array lists all compliance gaps discovered during the sweep. Each gap includes a type, the affected chain, a human-readable detail, and a severity level.
+The `nodes` array contains all artifacts in the traceability graph, with their phase, risk level, title, and covered status. The `edges` array lists all relationships (satisfies, implements, verifies, derives-from) with their type and source file. The `coverage` object maps each requirement to reachability paths and coverage status. The `gaps` array lists all compliance gaps discovered during the sweep.
 
 ### 4.4 Compliance Status Report
 
@@ -665,8 +704,8 @@ The compliance status report is generated during harden mode and stored at `.gxp
 | Field | Value |
 |-------|-------|
 | **Sprint** | 2026-S03 |
-| **Date** | 2026-02-07 |
-| **GxP.MD Version** | 2.0.0 |
+| **Date** | 2026-02-09 |
+| **GxP.MD Version** | 3.0.0 |
 | **Project** | [project.name] |
 | **Generated By** | [agent or tooling identifier] |
 
@@ -676,15 +715,16 @@ The compliance status report is generated during harden mode and stored at `.gxp
 |--------|-------|-----------|--------|
 | Annotation coverage (source files) | 100% | 100% | PASS |
 | Annotation coverage (test files) | 100% | 100% | PASS |
-| Traceability chain completeness | 91.7% (11/12) | 100% | FAIL |
+| Requirement coverage (reachability) | 100% (7/7) | 100% | PASS |
 | HIGH risk test coverage | 97.2% | 95% | PASS |
 | MEDIUM risk test coverage | 84.1% | 80% | PASS |
 | LOW risk test coverage | 72.3% | 60% | PASS |
+| DAG acyclicity | Valid (no cycles) | Acyclic | PASS |
 
 ## Open Gaps
 
-| ID | Severity | Chain | Description | Remediation |
-|----|----------|-------|-------------|-------------|
+| ID | Severity | Component | Description | Remediation |
+|----|----------|-----------|-------------|-------------|
 | GAP-001 | HIGH | REQ-002 | Missing IQ tier tests | Add IQ tests for infrastructure verification |
 
 ## Risk Assessment Status
@@ -725,7 +765,7 @@ Evidence packages are formalized during harden mode from CI test output. They ar
   "spec_id": "SPEC-001-001",
   "tier": "OQ",
   "gxp_risk": "HIGH",
-  "timestamp": "2026-02-07T14:30:00Z",
+  "timestamp": "2026-02-09T14:30:00Z",
   "duration_ms": 4523,
   "result": "pass",
   "test_count": 12,
@@ -767,7 +807,7 @@ Evidence packages are formalized during harden mode from CI test output. They ar
     "environment.json": "sha256:...",
     "test-output.log": "sha256:..."
   },
-  "generated_at": "2026-02-07T14:30:05Z"
+  "generated_at": "2026-02-09T14:30:05Z"
 }
 ```
 
@@ -822,7 +862,7 @@ HIGH risk components have direct impact on patient safety, product quality, or p
 
 **The agent MUST:**
 
-1. Ensure complete annotation coverage: `@gxp-req`, `@gxp-spec`, and `@gxp-risk HIGH` on all source files; `@gxp-spec`, `@trace`, `@test-type`, and `@gxp-risk HIGH` on all test files.
+1. Ensure complete annotation coverage: at least one of `@gxp-satisfies` or `@gxp-implements`, plus `@gxp-risk HIGH` on all source files; `@gxp-verifies`, `@test-type`, and `@gxp-risk HIGH` on all test files.
 2. Achieve test coverage at or above the `coverage_threshold` defined for HIGH risk (default: 95%).
 3. Write tests spanning all three verification tiers: IQ, OQ, and PQ.
 4. Request peer review before any merge. The merge MUST NOT proceed until review is approved.
@@ -831,7 +871,7 @@ HIGH risk components have direct impact on patient safety, product quality, or p
 
 **The agent SHOULD:**
 
-1. Create formal artifact files (`REQ-NNN.md`, `SPEC-NNN-NNN.md`) in `.gxp/` for HIGH risk components. Formal files provide space for regulatory basis, acceptance criteria, and detailed design rationale that annotations alone may not capture adequately.
+1. Create formal artifact files (`REQ-NNN.md`, `SPEC-NNN.md`) in `.gxp/` for HIGH risk components. Formal files provide space for regulatory basis, acceptance criteria, and detailed design rationale that annotations alone may not capture adequately.
 2. Generate signed evidence packages when signing infrastructure is available.
 
 **The agent MUST NOT:**
@@ -847,7 +887,7 @@ MEDIUM risk components affect regulated workflows or critical metadata but have 
 
 **The agent MUST:**
 
-1. Include `@gxp-spec` and `@gxp-risk MEDIUM` annotations in source and test files.
+1. Include at least one of `@gxp-satisfies` or `@gxp-implements`, plus `@gxp-risk MEDIUM` annotations in source and test files.
 2. Achieve test coverage at or above the `coverage_threshold` defined for MEDIUM risk (default: 80%).
 3. Write tests for OQ and PQ verification tiers.
 
@@ -863,14 +903,14 @@ LOW risk components have no GxP data impact. The agent MAY apply minimal verific
 
 **The agent SHOULD:**
 
-1. Include `@gxp-spec` and `@gxp-risk LOW` annotations in source files.
+1. Include at least one of `@gxp-satisfies` or `@gxp-implements`, plus `@gxp-risk LOW` annotations in source files.
 2. Achieve test coverage at or above the `coverage_threshold` defined for LOW risk (default: 60%).
 3. Write OQ-tier tests for functional correctness.
 
 **The agent MAY:**
 
 1. Omit IQ and PQ verification tiers.
-2. Omit `@gxp-req` and `@trace` annotations. For LOW risk, a `@gxp-spec` reference is sufficient traceability.
+2. Omit explicit parent requirement linking in `@gxp-satisfies`. For LOW risk, a `@gxp-implements SPEC-NNN` reference is sufficient traceability.
 3. Omit formal artifact files entirely.
 
 ### 5.5 Strict Mode
@@ -887,14 +927,13 @@ When `agent.mode` is set to `advisory`, all directives are downgraded to SHOULD-
 
 ### 6.1 Test Tag Format
 
-All test files in a GxP.MD-governed project MUST include standardized annotations as defined in Section 2.2. These annotations enable automated traceability auditing and evidence generation.
+All test files in a GxP.MD-governed project MUST include standardized annotations as defined in Section 2.3. These annotations enable automated traceability auditing and evidence generation.
 
 #### Required Tags (Recap)
 
 | Tag | Format | Description |
 |-----|--------|-------------|
-| `@gxp-spec` | `@gxp-spec SPEC-NNN-NNN` | Links the test to the specification it verifies |
-| `@trace` | `@trace US-NNN-NNN` | Links the test to the user story it validates |
+| `@gxp-verifies` | `@gxp-verifies SPEC-NNN[, SPEC-NNN, ...]` | Links test to spec(s) it verifies |
 | `@test-type` | `@test-type IQ\|OQ\|PQ` | Declares the verification tier |
 | `@gxp-risk` | `@gxp-risk HIGH\|MEDIUM\|LOW` | Declares the risk level of the tested component |
 
@@ -916,7 +955,7 @@ When the agent encounters test files that lack annotations (e.g., in legacy code
 
 1. **Directory-based inference:** Tests in `tests/iq/` are inferred as IQ tier, `tests/oq/` as OQ, `tests/pq/` as PQ.
 2. **Filename-based inference:** Files ending in `.e2e.ts` or `.e2e.test.ts` are inferred as PQ tier. Files ending in `.test.ts` without further qualification are inferred as OQ tier.
-3. **No inference for risk or traceability.** The agent MUST NOT infer `@gxp-risk` or `@gxp-spec` values. These require explicit annotation.
+3. **No inference for risk or traceability.** The agent MUST NOT infer `@gxp-risk` or `@gxp-verifies` values. These require explicit annotation.
 
 Inferred tags SHOULD be flagged in the harden mode gap analysis with a recommendation to add explicit annotations.
 
@@ -968,7 +1007,7 @@ Records MUST correctly reflect the activity they document.
 - The system state hash recorded in evidence packages MUST match the actual SHA-256 hash of the `/src` tree at the time of test execution.
 - Coverage numbers in `metadata.json` MUST match the raw coverage data in the test output.
 - The agent MUST NOT manually adjust test results, coverage numbers, or any other metrics in evidence packages.
-- Annotations MUST accurately reflect the component's actual risk level, governing requirement, and governing specification.
+- Annotations MUST accurately reflect the component's actual risk level and governing artifacts.
 
 ### 7.6 Complete (ALCOA+ Extension)
 
@@ -977,7 +1016,7 @@ All data MUST be present, including failed attempts, re-runs, and negative resul
 - All test executions MUST produce evidence — not only successful runs.
 - When a test suite is re-run after a failure, both the failing and passing evidence MUST be retained. Evidence directories are append-only.
 - Skip counts MUST be recorded and justified. An agent MUST NOT skip tests to improve pass rates without documenting the justification.
-- The traceability matrix generated during harden mode MUST include all chains, not only complete ones. Incomplete chains are reported in the gaps array.
+- The traceability matrix generated during harden mode MUST include all nodes and edges, not only covered ones. Incomplete paths are reported in the gaps array.
 
 ### 7.7 Consistent (ALCOA+ Extension)
 
@@ -1007,7 +1046,7 @@ Records MUST be accessible to authorized parties when needed.
 
 ## 8. Quality Gates
 
-Quality gates are the primary compliance enforcement mechanism in GxP.MD v2. They define what must be true at each checkpoint, not how the agent must work to get there.
+Quality gates are the primary compliance enforcement mechanism in GxP.MD v3. They define what must be true at each checkpoint, not how the agent must work to get there.
 
 ### 8.1 Pre-Commit Gate
 
@@ -1015,8 +1054,8 @@ Scope: Individual commits. Protects annotation hygiene.
 
 | Check | Description |
 |-------|-------------|
-| `annotations_valid` | All `@gxp-req`, `@gxp-spec`, `@gxp-risk`, `@gxp-story`, `@trace`, and `@test-type` annotations in modified files conform to Section 2 format. |
-| `no_untagged_gxp_code` | All modified source files containing GxP-relevant logic include at minimum `@gxp-spec` and `@gxp-risk` annotations. |
+| `annotations_valid` | All `@gxp-satisfies`, `@gxp-implements`, `@gxp-verifies`, `@gxp-risk`, `@gxp-derives-from`, and `@test-type` annotations in modified files conform to Section 2 format. |
+| `no_untagged_gxp_code` | All modified source files containing GxP-relevant logic include at least one of `@gxp-satisfies` or `@gxp-implements`, plus `@gxp-risk` annotations. |
 
 Pre-commit gates are lightweight and fast. They validate syntax and presence, not completeness.
 
@@ -1029,7 +1068,7 @@ Scope: Feature branch merges. Protects the shared codebase.
 | `all_tests_pass` | All tests for affected components across all required verification tiers pass. Zero failures. |
 | `coverage_meets_threshold` | Test coverage for every modified component meets or exceeds its risk-level threshold. |
 | `review_complete_if_required` | For components where `review_required` is `true`, at least one reviewer has approved. |
-| `no_orphan_annotations` | All annotation IDs in modified files resolve to a corresponding annotation or formal artifact. |
+| `no_orphan_annotations` | All annotation IDs in modified files resolve to a corresponding annotation or formal artifact. Graph edges must be valid. |
 
 Pre-merge gates are the primary enforcement point during development. They ensure that no code reaches the main branch without valid annotations, passing tests, and sufficient coverage.
 
@@ -1040,7 +1079,7 @@ Scope: Sprint boundaries, release boundaries. Protects the compliance record.
 | Check | Description |
 |-------|-------------|
 | `harden_sweep_complete` | The compliance sweep protocol (Section 4.2) has been executed for this sprint/release. |
-| `traceability_matrix_current` | `.gxp/traceability-matrix.json` reflects the current state of all annotations and artifacts. |
+| `traceability_matrix_current` | `.gxp/traceability-matrix.json` reflects the current state of all annotations and artifacts. DAG is valid and acyclic. |
 | `evidence_packages_complete` | Evidence packages exist for all test executions in the current sprint/release. |
 | `compliance_status_generated` | `.gxp/compliance-status.md` has been generated with current metrics and gap analysis. |
 | `risk_assessment_current` | `.gxp/risk_assessment.log` reflects the current risk landscape. No stale or unaddressed risks. |
@@ -1051,7 +1090,7 @@ Per-release gates ensure that the compliance record is complete and current at e
 
 ## 9. Repository Structure
 
-A project governed by GxP.MD v2 MUST maintain the following directory structure:
+A project governed by GxP.MD v3 MUST maintain the following directory structure:
 
 ```
 project-root/
@@ -1060,13 +1099,13 @@ project-root/
 │   ├── system_context.md           # System description (manually maintained)
 │   ├── risk_assessment.log         # Risk register (manually maintained)
 │   ├── requirements/               # OPTIONAL: formal requirement docs (REQ-NNN.md)
-│   ├── user_stories/               # OPTIONAL: formal user story docs (US-NNN-NNN.md)
-│   ├── specs/                      # OPTIONAL: formal specification docs (SPEC-NNN-NNN.md)
+│   ├── user_stories/               # OPTIONAL: formal user story docs (US-NNN.md)
+│   ├── specs/                      # OPTIONAL: formal specification docs (SPEC-NNN.md)
 │   ├── adr/                        # OPTIONAL: architecture decision records
 │   ├── evidence/                   # Evidence packages (generated during harden)
-│   │   ├── IQ-SPEC-001-001-20260207T143000/
-│   │   ├── OQ-SPEC-001-001-20260207T143000/
-│   │   └── PQ-SPEC-001-001-20260207T150000/
+│   │   ├── IQ-SPEC-001-20260209T143000/
+│   │   ├── OQ-SPEC-042-20260209T143000/
+│   │   └── PQ-SPEC-042-20260209T150000/
 │   ├── traceability-matrix.json    # Generated during harden
 │   └── compliance-status.md        # Generated during harden
 ├── src/                            # Source code WITH inline annotations
@@ -1102,7 +1141,7 @@ The `.gxp/risk_assessment.log` is a chronological record of risk identification,
 ```markdown
 ## RISK-{NNN}: {Title}
 
-- **Date:** 2026-02-07
+- **Date:** 2026-02-09
 - **Author:** author@example.com
 - **Component:** src/modules/auth/
 - **Risk Level:** HIGH
@@ -1118,7 +1157,7 @@ The `.gxp/risk_assessment.log` is a chronological record of risk identification,
 
 This section defines the frontmatter schemas for optional formal artifact files in `.gxp/`. These schemas apply to teams that choose to maintain separate requirement, user story, and specification documents for additional depth beyond what annotations provide.
 
-Formal artifact files are NOT required for GxP.MD v2 compliance. Annotations are the primary traceability mechanism. These schemas are provided for teams that want or need the additional documentation.
+Formal artifact files are NOT required for GxP.MD v3 compliance. Annotations are the primary traceability mechanism. These schemas are provided for teams that want or need the additional documentation.
 
 ### 10.1 Requirements (`.gxp/requirements/REQ-NNN.md`)
 
@@ -1133,41 +1172,41 @@ acceptance_criteria:
   - "Criterion 1"
   - "Criterion 2"
 validation_status: draft           # draft | in_review | validated | retired
-created: "2026-02-07"
-updated: "2026-02-07"
+created: "2026-02-09"
+updated: "2026-02-09"
 author: "author@example.com"
 ---
 ```
 
 **Body:** Detailed requirement narrative including regulatory basis, business justification, and any constraints.
 
-### 10.2 User Stories (`.gxp/user_stories/US-NNN-NNN.md`)
+### 10.2 User Stories (`.gxp/user_stories/US-NNN.md`)
 
 ```yaml
 ---
-gxp_id: US-001-001
+gxp_id: US-042
 title: "User story title"
-parent_id: REQ-001                 # Parent requirement ID
+parent_id: REQ-001                 # Parent requirement ID (optional in v3)
 acceptance_criteria:
   - "Given/When/Then criterion 1"
   - "Given/When/Then criterion 2"
 verification_tier: OQ              # Primary verification tier: IQ | OQ | PQ
 validation_status: draft           # draft | in_review | validated | retired
-created: "2026-02-07"
-updated: "2026-02-07"
+created: "2026-02-09"
+updated: "2026-02-09"
 author: "author@example.com"
 ---
 ```
 
 **Body:** User story narrative in "As a [role], I want [capability], so that [benefit]" format, followed by detailed acceptance criteria.
 
-### 10.3 Technical Specifications (`.gxp/specs/SPEC-NNN-NNN.md`)
+### 10.3 Technical Specifications (`.gxp/specs/SPEC-NNN.md`)
 
 ```yaml
 ---
-gxp_id: SPEC-001-001
+gxp_id: SPEC-042
 title: "Specification title"
-parent_id: US-001-001              # Parent user story ID
+parent_id: US-042                  # Parent user story ID (optional in v3)
 verification_tier: OQ              # IQ | OQ | PQ
 design_approach: "Brief description of the implementation approach"
 source_files:
@@ -1175,8 +1214,8 @@ source_files:
 test_files:
   - "tests/oq/auth/login.test.ts"
 validation_status: draft           # draft | in_review | validated | retired
-created: "2026-02-07"
-updated: "2026-02-07"
+created: "2026-02-09"
+updated: "2026-02-09"
 author: "author@example.com"
 ---
 ```
@@ -1314,14 +1353,16 @@ Custom frontmatter keys are opaque to the GxP.MD specification — they are cons
 |------|-----------|
 | **ADR** | Architecture Decision Record. A document recording a significant architectural decision, its context, and consequences. |
 | **ALCOA+** | Attributable, Legible, Contemporaneous, Original, Accurate + Complete, Consistent, Enduring, Available. The regulatory standard for data integrity. |
-| **Annotation** | A structured comment in a source or test file that declares traceability, risk level, and verification tier for GxP compliance. The primary compliance mechanism in GxP.MD v2. |
-| **Artifact** | A documented deliverable in the validation lifecycle: requirement, user story, specification, or evidence package. In v2, annotations are the primary artifacts; formal files are optional. |
-| **Compliance Sweep** | The systematic process executed during harden mode that validates annotations, builds the traceability matrix, analyzes coverage, and produces the compliance status report. |
+| **Annotation** | A structured comment in a source or test file that declares traceability via edge tags, risk level, and verification tier for GxP compliance. The primary compliance mechanism in GxP.MD v3. |
+| **Artifact** | A documented deliverable in the validation lifecycle: requirement, user story, specification, or evidence package. In v3, annotations are the primary artifacts; formal files are optional. |
+| **Compliance Sweep** | The systematic process executed during harden mode that validates annotations, builds the traceability DAG, analyzes coverage, and produces the compliance status report. |
+| **DAG** | Directed Acyclic Graph. The graph structure used in v3 to represent traceability relationships without hierarchical ID encoding. |
 | **Develop Mode** | The day-to-day operating mode. Lightweight, annotation-driven. Gates enforce compliance at commit and merge boundaries. |
+| **Edge Tag** | An annotation tag that declares a traceability relationship (edge) between artifacts: `@gxp-satisfies`, `@gxp-implements`, `@gxp-verifies`, `@gxp-derives-from`. |
 | **Evidence Package** | A self-contained directory containing test results, environment data, manifest hashes, and optional cryptographic signature proving verification was performed. Formalized during harden mode. |
-| **Formal Artifact File** | A separate markdown document in `.gxp/` (e.g., `REQ-NNN.md`, `SPEC-NNN-NNN.md`) providing detailed documentation beyond what annotations express. Optional in v2. |
+| **Formal Artifact File** | A separate markdown document in `.gxp/` (e.g., `REQ-NNN.md`, `SPEC-NNN.md`) providing detailed documentation beyond what annotations express. Optional in v3. |
 | **GAMP** | Good Automated Manufacturing Practice. ISPE guidelines for validating computerized systems. Category 5 = custom-built software. |
-| **Gate** | An enforcement checkpoint that blocks workflow progression until defined conditions are met. The primary compliance enforcement mechanism in v2. |
+| **Gate** | An enforcement checkpoint that blocks workflow progression until defined conditions are met. The primary compliance enforcement mechanism in v3. |
 | **GxP** | Good Practice. An umbrella term for quality guidelines and regulations including GMP, GLP, GCP, GDP, and related standards. |
 | **Harden Mode** | The per-sprint compliance formalization mode. Produces traceability matrix, compliance status report, evidence packages, and gap analysis. This IS audit-readiness. |
 | **IQ** | Installation Qualification. Verification that a system is installed correctly with all dependencies present and configured. |
@@ -1329,12 +1370,13 @@ Custom frontmatter keys are opaque to the GxP.MD specification — they are cons
 | **OQ** | Operational Qualification. Verification that a system functions correctly according to its specifications. |
 | **PHI** | Protected Health Information. Individually identifiable health data subject to privacy regulations (e.g., HIPAA). |
 | **PQ** | Performance Qualification. Verification that a system performs acceptably under conditions approximating real-world use. |
+| **Reachability** | In the traceability DAG, the property that a node (requirement) is reachable from another node (test) by following edges. Used to determine coverage. |
 | **Risk Matrix** | The configuration mapping risk levels (HIGH/MEDIUM/LOW) to enforcement requirements (coverage, tiers, signing, review). |
-| **ROSIE** | The artifact and evidence standard (RFC-001) that defines the `.gxp/` directory structure and evidence package format. Compatible with but not required by GxP.MD v2. |
+| **ROSIE** | The artifact and evidence standard (RFC-001) that defines the `.gxp/` directory structure and evidence package format. Compatible with but not required by GxP.MD v3. |
 | **SOUP** | Software of Unknown Provenance. Third-party software components not developed under the project's quality system. |
-| **Traceability** | The ability to follow any component from its origin requirement through implementation to verification evidence, and vice versa. Maintained through annotations in v2. |
-| **Traceability Matrix** | A JSON document generated during harden mode that maps the complete REQ -> US -> SPEC -> CODE -> TEST chain for every requirement. |
-| **V-Model** | A software development model where each development phase has a corresponding verification phase. In v2, the V-Model defines the shape of traceability; annotations express the relationships. |
+| **Traceability** | The ability to follow any component from its origin requirement through implementation to verification evidence, and vice versa. Maintained through edge tags in v3. |
+| **Traceability Matrix** | A JSON document generated during harden mode that maps the complete DAG of requirement, user story, specification, code, and test nodes and edges. |
+| **V-Model** | A software development model where each development phase has a corresponding verification phase. In v3, the V-Model defines the shape of traceability; edge tags express the relationships. |
 | **Verification Tier** | A category of testing activity (IQ, OQ, or PQ) aligned with qualification protocols in the V-Model. |
 
 ---
@@ -1348,35 +1390,60 @@ Implementations of GxP.MD tooling MUST declare their conformance level:
 | Level | Description |
 |-------|-------------|
 | **Level 1: Parse** | Can parse GxP.MD frontmatter and extract configuration values. |
-| **Level 2: Annotate** | Level 1 + can parse and validate annotations in source and test files. |
+| **Level 2: Annotate** | Level 1 + can parse and validate annotations in source and test files, including edge tags. |
 | **Level 3: Gate** | Level 2 + can enforce quality gates (pre-commit, pre-merge) and block non-compliant actions. |
-| **Level 4: Harden** | Level 3 + can execute the compliance sweep and generate traceability matrix, compliance status report, and evidence packages. |
+| **Level 4: Harden** | Level 3 + can execute the compliance sweep, build the traceability DAG, and generate traceability matrix, compliance status report, and evidence packages. |
 | **Level 5: Full** | Level 4 + can manage the complete artifact lifecycle including formal files, signing, and retention enforcement. |
 
 ### 14.2 Agent Conformance
 
-An AI coding agent claims GxP.MD conformance by declaring which specification version it supports and at what level. Conformance is demonstrated through behavior, not assertion — an agent claiming Level 4 conformance MUST be capable of executing all develop and harden mode directives in this specification when operating on a GxP.MD-governed project.
+An AI coding agent claims GxP.MD v3 conformance by declaring which specification version it supports and at what level. Conformance is demonstrated through behavior, not assertion — an agent claiming Level 4 conformance MUST be capable of executing all develop and harden mode directives in this specification when operating on a GxP.MD-governed project.
 
 ### 14.3 Version Compatibility
 
 GxP.MD follows semantic versioning. Tooling MUST:
 
 - Support the exact `gxpmd_version` declared in the frontmatter.
-- SHOULD support backward-compatible minor versions (e.g., tooling supporting 2.1.0 SHOULD support 2.0.0).
+- SHOULD support backward-compatible minor versions (e.g., tooling supporting 3.1.0 SHOULD support 3.0.0).
 - MUST reject frontmatter with a major version it does not support, with a clear error message.
 
-### 14.4 Migration from v1
+### 14.4 Migration from v2
 
-Projects migrating from GxP.MD v1.0.0 to v2.0.0 SHOULD:
+Projects migrating from GxP.MD v2.x to v3.0.0 SHOULD:
 
-1. Set `agent.mode` to `advisory` during the migration period. This allows existing workflows to continue while annotations are added incrementally.
-2. Add annotations to source and test files as they are modified. There is no requirement to annotate the entire codebase at once.
-3. Set `artifacts.formal_artifacts` to `optional` to preserve existing `.gxp/requirements/`, `.gxp/user_stories/`, and `.gxp/specs/` files while removing the requirement to create new ones.
-4. Run the first harden cycle once a meaningful portion of the codebase is annotated. The gap analysis will identify remaining unannotated areas.
-5. Transition to `risk_proportionate` mode once annotation coverage is sufficient for the project's risk profile.
+1. Replace `@gxp-req` and `@gxp-spec` tags in source files with `@gxp-satisfies` or `@gxp-implements` edge tags that explicitly declare the relationships.
+2. Replace `@gxp-spec` and `@trace` tags in test files with `@gxp-verifies` edge tags that explicitly link to the specs being verified.
+3. Update ID assignments to use opaque identifiers (no hierarchical encoding). Old IDs like `US-001-001` become `US-042`; old IDs like `SPEC-001-001` become `SPEC-137`. Use distinct sequences per phase.
+4. Update the `gxpmd_version` in the frontmatter to `"3.0.0"` and update the `annotations.required_tags` and add `annotations.edge_tags` sections as shown in the frontmatter above.
+5. Run the first harden cycle after updating all annotations. The traceability matrix will be computed from the DAG of edge tags.
+6. Existing formal artifact files in `.gxp/requirements/`, `.gxp/user_stories/`, and `.gxp/specs/` are NOT invalidated by the v3 migration. They are incorporated into the traceability matrix alongside the new edge tags. The v3 model is additive.
 
-Existing formal artifact files are NOT invalidated by v2. They are incorporated into the traceability matrix alongside annotations. The v2 model is additive — annotations provide the baseline; formal files provide optional depth.
+The migration is straightforward because v3 retains the same fundamental structure; only the ID encoding and traceability inference model change.
 
 ---
 
-*End of GxP.MD Specification v2.1.0*
+## 15. Appendix E: Edge Tag Reference
+
+This appendix provides a quick reference for all edge tags defined in v3.
+
+### 15.1 Source File Edge Tags
+
+| Tag | Direction | Meaning | Example |
+|-----|-----------|---------|---------|
+| `@gxp-satisfies` | Upstream | This code satisfies requirement(s) | `@gxp-satisfies REQ-001, REQ-003` |
+| `@gxp-implements` | Upstream | This code implements user story/spec(s) | `@gxp-implements US-042, SPEC-137` |
+| `@gxp-derives-from` | Upstream | This code depends on/extends spec(s) | `@gxp-derives-from SPEC-100` |
+
+**Required in source files:** At least one of `@gxp-satisfies` or `@gxp-implements` MUST be present. `@gxp-derives-from` is optional.
+
+### 15.2 Test File Edge Tags
+
+| Tag | Direction | Meaning | Example |
+|-----|-----------|---------|---------|
+| `@gxp-verifies` | Downstream | This test verifies spec(s) | `@gxp-verifies SPEC-042, SPEC-043` |
+
+**Required in test files:** `@gxp-verifies` MUST be present. This links the test back to the specification(s) it verifies, completing the reachability path.
+
+---
+
+*End of GxP.MD Specification v3.0.0*
