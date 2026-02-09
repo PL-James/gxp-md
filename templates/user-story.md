@@ -1,18 +1,18 @@
 ---
 # GxP User Story
 # User stories describe HOW users interact with the system to satisfy a requirement.
-# Name this file: .gxp/user_stories/US-{REQ}-{NNN}-short-description.md
-# Example: US-001-001-view-audit-log.md (first story for REQ-001)
+# Name this file: .gxp/user_stories/US-{NNN}-short-description.md
+# Example: US-001-view-audit-log.md, US-005-manage-batch-records.md
 
-# Unique GxP identifier (format: US-{REQ}-{NNN})
-# First segment matches parent requirement, second is story number
-gxp_id: US-001-001
+# Unique GxP identifier (format: US-NNN, opaque, non-hierarchical)
+gxp_id: US-001
 
 # Short, descriptive title (user-facing language)
 title: "User Story Title (As a [role], I want to [action])"
 
-# Parent requirement this story implements (REQUIRED)
-parent_id: REQ-001
+# Requirements this user story satisfies (many-to-many edge relationship)
+# List REQ-NNN IDs that this story implements
+satisfies: [REQ-001]
 
 # Acceptance criteria (testable conditions)
 # Each criterion should be independently verifiable
@@ -37,7 +37,7 @@ validation_status: DRAFT
 
 ---
 
-# US-{REQ}-{NNN}: {Title}
+# US-{NNN}: {Title}
 
 ## User Story
 
@@ -82,7 +82,7 @@ This user story supports [parent requirement] by enabling [user role] to [accomp
 
 | Field | Display Format | Example |
 |-------|---------------|---------|
-| Timestamp | YYYY-MM-DD HH:MM:SS UTC | 2025-02-07 14:23:15 UTC |
+| Timestamp | YYYY-MM-DD HH:MM:SS UTC | 2026-02-07 14:23:15 UTC |
 | User | Full Name (Username) | John Smith (jsmith) |
 | Action | Human-readable verb | Approved Batch Record |
 | Entity | Type + ID | Batch Record #12345 |
@@ -99,7 +99,7 @@ Use **Given-When-Then** format for clarity:
 
 2. **AC2: Filtering by Date**
    - **Given** I am on the Audit Log page
-   - **When** I set a date range filter (2025-02-01 to 2025-02-07)
+   - **When** I set a date range filter (2026-02-01 to 2026-02-07)
    - **Then** only audit events within that date range are displayed
 
 3. **AC3: Unauthorized Access Prevention**
@@ -148,8 +148,8 @@ Use **Given-When-Then** format for clarity:
 
 ### User Story Dependencies
 
-- **Depends On**: US-XXX-XXX (User authentication story)
-- **Blocks**: US-001-002 (Advanced audit search story)
+- **Depends On**: US-XXX (User authentication story)
+- **Blocks**: US-002 (Advanced audit search story)
 
 ## Verification Plan
 
@@ -189,9 +189,9 @@ Use **Given-When-Then** format for clarity:
 ### Traceability
 
 - **Parent Requirement**: REQ-001 (Audit Trail)
-- **Child Specifications**:
-  - SPEC-001-001 (Audit Log UI Component)
-  - SPEC-001-002 (Audit Log API)
+- **Child Specifications** (will implement this story):
+  - SPEC-001 (Audit Log UI Component)
+  - SPEC-002 (Audit Log API)
 
 ## Open Questions
 

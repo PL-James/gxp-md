@@ -1,18 +1,22 @@
 ---
 # GxP Technical Specification
 # Specifications describe HOW the system is implemented (technical design).
-# Name this file: .gxp/specs/SPEC-{US}-{NNN}-short-description.md
-# Example: SPEC-001-001-audit-log-ui.md (first spec for US-001-001)
+# Name this file: .gxp/specs/SPEC-{NNN}-short-description.md
+# Example: SPEC-001-audit-log-ui.md, SPEC-005-batch-record-api.md
 
-# Unique GxP identifier (format: SPEC-{US}-{NNN})
-# First segment matches parent user story, second is spec number
-gxp_id: SPEC-001-001
+# Unique GxP identifier (format: SPEC-NNN, opaque, non-hierarchical)
+gxp_id: SPEC-001
 
-# Short, descriptive title (technical component name)
+# Short, descriptive title (technical component or module name)
 title: "Technical Component or Module Name"
 
-# Parent user story this spec implements (REQUIRED)
-parent_id: US-001-001
+# User stories this specification implements (many-to-many edge relationship)
+# List US-NNN IDs that this spec implements
+implements: [US-001]
+
+# Requirements this specification directly satisfies (optional many-to-many edge)
+# List REQ-NNN IDs for direct requirement satisfaction (can skip if only through US)
+satisfies: [REQ-001]
 
 # Verification tier (when this specification is tested)
 # IQ = Installation Qualification (deployment, config, infrastructure)
@@ -60,12 +64,12 @@ validation_status: DRAFT
 
 ---
 
-# SPEC-{US}-{NNN}: {Title}
+# SPEC-{NNN}: {Title}
 
 ## Overview
 
 This specification describes the implementation of [component/module name]
-to satisfy user story [US-XXX-XXX] and requirement [REQ-XXX].
+to satisfy user story [US-XXX] and requirement [REQ-XXX].
 
 **Component Type**: [React Component / API Endpoint / Database Schema / Service / Utility]
 
@@ -152,7 +156,7 @@ type ActionType = 'CREATE' | 'UPDATE' | 'DELETE' | 'APPROVE' | 'REJECT';
   "data": [
     {
       "id": "uuid",
-      "timestamp": "2025-02-07T14:23:15.123Z",
+      "timestamp": "2026-02-07T14:23:15.123Z",
       "userId": "uuid",
       "userName": "John Smith",
       "actionType": "APPROVE",
@@ -289,8 +293,8 @@ Test scenarios:
 
 ### Evidence Package Reference
 
-- **Package ID**: `OQ-SPEC-001-001-20250207T142315Z`
-- **Location**: `.gxp/evidence/OQ-SPEC-001-001-20250207T142315Z/`
+- **Package ID**: `OQ-SPEC-001-20260207T142315Z`
+- **Location**: `.gxp/evidence/OQ-SPEC-001-20260207T142315Z/`
 - **Contents**:
   - Unit test results (JUnit XML)
   - Integration test results
@@ -321,11 +325,11 @@ Test scenarios:
 
 ## Traceability
 
-- **Parent User Story**: US-001-001 (View Audit Log)
+- **Parent User Story**: US-001 (View Audit Log)
 - **Grandparent Requirement**: REQ-001 (Audit Trail)
 - **Related Specifications**:
-  - SPEC-001-002 (Audit Log API Backend)
-  - SPEC-001-003 (Audit Event Database Schema)
+  - SPEC-002 (Audit Log API Backend)
+  - SPEC-003 (Audit Event Database Schema)
 
 ## Change History
 
