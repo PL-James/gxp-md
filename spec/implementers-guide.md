@@ -112,7 +112,7 @@ Every edge carries:
 
 The `GxP.MD` file uses YAML frontmatter delimited by `---` on its own line:
 
-```
+```yaml
 ---
 gxpmd_version: "3.0.0"
 project:
@@ -172,7 +172,7 @@ If frontmatter is missing or malformed, fall back to these defaults rather than 
 
 Your tool MUST parse these v3 edge tags:
 
-```
+```text
 @gxp-satisfies   REQ-NNN[, REQ-NNN, ...]
 @gxp-implements  US-NNN|SPEC-NNN[, US-NNN|SPEC-NNN, ...]
 @gxp-verifies    SPEC-NNN[, SPEC-NNN, ...]
@@ -181,7 +181,7 @@ Your tool MUST parse these v3 edge tags:
 
 And these common tags:
 
-```
+```text
 @gxp-risk        HIGH|MEDIUM|LOW
 @gxp-risk-concern "description string"
 @test-type       IQ|OQ|PQ
@@ -217,7 +217,7 @@ Example: `@gxp-satisfies REQ-001, REQ-003` yields `['REQ-001', 'REQ-003']`.
 
 During the migration period, your tool SHOULD also recognize v2 tags:
 
-```
+```text
 @gxp-req   REQ-NNN ["description"]     →  treat as @gxp-satisfies REQ-NNN
 @gxp-spec  SPEC-NNN-NNN ["description"] → treat as @gxp-implements SPEC-NNN-NNN (source) or @gxp-verifies SPEC-NNN-NNN (test)
 @trace     US-NNN-NNN                   →  treat as @gxp-verifies US-NNN-NNN
@@ -240,7 +240,7 @@ Everything else with GxP annotations is a source file.
 
 Scan any file with these extensions:
 
-```
+```text
 .ts .tsx .js .jsx .mjs .cjs       (TypeScript/JavaScript)
 .py .pyw                           (Python)
 .java .kt .kts                    (Java/Kotlin)
@@ -256,7 +256,7 @@ Scan any file with these extensions:
 
 Always skip:
 
-```
+```text
 node_modules  dist  build  .git  .gxp
 __pycache__  .venv  venv  .tox  target
 vendor  coverage  .next  .nuxt
@@ -274,7 +274,7 @@ This is the core algorithm. It takes parsed annotations and produces the graph.
 
 ### 5.1 Algorithm Overview
 
-```
+```text
 Input:  List of parsed annotation records (one per annotated file)
 Output: { nodes: {id → properties}, edges: [{from, to, type, source_file}], coverage: {req_id → coverage_info} }
 
@@ -301,7 +301,7 @@ After all files processed:
 
 For source/test files, generate deterministic node IDs:
 
-```
+```text
 FILE:src/auth/login.ts
 FILE:tests/oq/auth/login.test.ts
 ```
@@ -320,7 +320,7 @@ A requirement `REQ-NNN` is **covered** if there exists at least one path between
 
 Algorithm (BFS from each requirement, traversing edges as undirected):
 
-```
+```text
 function is_covered(req_id, nodes, edges):
     // Build undirected adjacency: node → [neighbors]
     adj = build_undirected_adjacency(edges)
@@ -349,7 +349,7 @@ function is_covered(req_id, nodes, edges):
 
 The graph MUST be acyclic. If you detect a cycle, emit an ERROR. Simple DFS cycle detection suffices:
 
-```
+```text
 function detect_cycles(nodes, edges):
     adj = build_adjacency(edges)
     WHITE, GRAY, BLACK = 0, 1, 2
@@ -690,7 +690,7 @@ This means the graph has two edge sources: code annotations and artifact file fr
 
 ### 10.1 Package Structure
 
-```
+```text
 .gxp/evidence/{TIER}-{SPEC_ID}-{TIMESTAMP}/
 ├── metadata.json
 ├── environment.json
@@ -768,9 +768,9 @@ In v3, `SPEC-042` has no implied relationship to any requirement. All relationsh
 
 ### 12.2 DO NOT Reject Skipped Phases
 
-A valid v3 traceability path for a LOW risk component:
+A valid v3 traceability path for a LOW-risk component:
 
-```
+```text
 SPEC-042 ← implements ← FILE:src/util.ts ← verifies ← FILE:tests/oq/util.test.ts
 ```
 
@@ -862,7 +862,7 @@ When a user clicks `SPEC-042` in a `@gxp-verifies` tag, navigate to the source f
 
 Show a CodeLens above each annotated function:
 
-```
+```text
 REQ-001 → SPEC-042 → 3 tests (OQ: 2, PQ: 1) | coverage: 97.2% | risk: HIGH
 ```
 
@@ -896,7 +896,7 @@ GxP.MD follows semver. Breaking changes (new required tags, changed ID formats, 
 
 ## Appendix A: Complete Data Flow
 
-```
+```text
 ┌─────────────────────┐
 │  GxP.MD (config)    │
 └────────┬────────────┘

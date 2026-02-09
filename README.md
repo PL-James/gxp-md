@@ -40,10 +40,10 @@ Drop a `GxP.MD` file in your project root. Your AI agent reads it, understands t
 AI agents are great at writing code. They're terrible at regulatory compliance — unless you tell them exactly what the rules are. GxP.MD is that instruction set: a single file that turns any AI coding agent into a GxP-aware development partner.
 
 ```
-  REQ ──satisfies──▶ US ──implements──▶ SPEC ──implements──▶ CODE ──verifies──▶ TEST
-   │                  │                   │                    ▲                  ▲
-   └──satisfies───────┴───implements──────┴────────────────────┘──────verifies────┘
-                         (many-to-many edges via @gxp-satisfies, @gxp-implements, @gxp-verifies)
+  REQ ◀──satisfied by── US ◀──implemented by── SPEC ◀──implemented by── CODE ◀──verified by── TEST
+   ▲                     ▲                      ▲                         │                    │
+   └──satisfied by───────┴──implemented by──────┴─────────────────────────┘──verified by───────┘
+              (many-to-many edges via @gxp-satisfies, @gxp-implements, @gxp-verifies)
 ```
 
 ### Key properties

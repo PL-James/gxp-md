@@ -226,12 +226,17 @@ def _is_test_file(rel_path: str) -> bool:
 # Traceability graph construction
 # ---------------------------------------------------------------------------
 
+_RISK_ORDER = {'HIGH': 3, 'MEDIUM': 2, 'LOW': 1, 'UNKNOWN': 0}
+
+
 def _ensure_node(nodes, node_id, phase, risk=None, title=None, file=None):
     """Ensure a node exists in the graph with given properties."""
     if node_id not in nodes:
         nodes[node_id] = {'phase': phase, 'risk': risk, 'files': [], 'title': title, 'tiers': set()}
-    if risk and not nodes[node_id].get('risk'):
-        nodes[node_id]['risk'] = risk
+    if risk:
+        existing_risk = nodes[node_id].get('risk')
+        if not existing_risk or _RISK_ORDER.get(risk, 0) > _RISK_ORDER.get(existing_risk, 0):
+            nodes[node_id]['risk'] = risk
     if title and not nodes[node_id].get('title'):
         nodes[node_id]['title'] = title
     if file and file not in nodes[node_id]['files']:
@@ -270,7 +275,7 @@ def build_traceability(annotations: list[dict]) -> dict:
 
         # Register nodes from edge tags
         for req_id in ann.get('satisfies', []):
-            _ensure_node(nodes, req_id, 'requirement')
+            _ensure_node(nodes, req_id, 'requirement', risk=risk)
             # The file satisfies this requirement
             file_node_id = _file_node_id(f)
             _ensure_node(nodes, file_node_id, 'test' if ann['is_test'] else 'code', risk=risk, file=f)
@@ -278,13 +283,13 @@ def build_traceability(annotations: list[dict]) -> dict:
 
         for impl_id in ann.get('implements', []):
             phase = 'user_story' if impl_id.startswith('US-') else 'specification'
-            _ensure_node(nodes, impl_id, phase)
+            _ensure_node(nodes, impl_id, phase, risk=risk)
             file_node_id = _file_node_id(f)
             _ensure_node(nodes, file_node_id, 'test' if ann['is_test'] else 'code', risk=risk, file=f)
             edges.append({'from': file_node_id, 'to': impl_id, 'type': 'implements', 'source_file': f})
 
         for ver_id in ann.get('verifies', []):
-            _ensure_node(nodes, ver_id, 'specification')
+            _ensure_node(nodes, ver_id, 'specification', risk=risk)
             file_node_id = _file_node_id(f)
             _ensure_node(nodes, file_node_id, 'test' if ann['is_test'] else 'code', risk=risk, file=f)
             edges.append({'from': file_node_id, 'to': ver_id, 'type': 'verifies', 'source_file': f})
@@ -445,7 +450,7 @@ def validate_annotations(annotations: list[dict], config: dict) -> list[dict]:
     return issues
 
 
-def find_orphans(traceability: dict, annotations: list[dict]) -> list[dict]:
+def find_orphans(traceability: dict, _annotations: list[dict]) -> list[dict]:
     """Find nodes with no incoming or outgoing edges (disconnected from graph)."""
     issues = []
     nodes = traceability['nodes']
@@ -589,25 +594,21 @@ def generate_traceability_matrix(traceability, config, project_root):
     edges = traceability['edges']
     coverage = traceability['coverage']
 
-    nodes_output = []
+    nodes_output = {}
     for nid, n in sorted(nodes.items()):
-        if nid.startswith('FILE:'):
-            continue  # Don't output file pseudo-nodes
-        nodes_output.append({
-            'id': nid,
+        nodes_output[nid] = {
             'phase': n['phase'],
             'risk': n.get('risk'),
             'title': n.get('title'),
             'files': n.get('files', []),
             'tiers': sorted(n.get('tiers', set())),
             'covered': coverage.get(nid, {}).get('covered', False) if n['phase'] == 'requirement' else None,
-        })
+        }
 
     edges_output = []
     for e in edges:
-        from_id = e['from'].replace('FILE:', '') if e['from'].startswith('FILE:') else e['from']
         edges_output.append({
-            'from': from_id,
+            'from': e['from'],
             'to': e['to'],
             'type': e['type'],
             'source_file': e.get('source_file')
@@ -639,12 +640,17 @@ def generate_traceability_matrix(traceability, config, project_root):
         },
         'nodes': nodes_output,
         'edges': edges_output,
-        'coverage': {k: {'risk': v['risk'], 'covered': v['covered']} for k, v in coverage.items()},
+        'coverage': {k: {
+            'risk': v['risk'],
+            'covered': v['covered'],
+            'test_nodes': v.get('test_nodes', []),
+            'reachable_nodes': v.get('reachable_nodes', 0),
+        } for k, v in coverage.items()},
     }
 
 
 def generate_compliance_status(traceability, validation_issues, orphan_issues, coverage_issues,
-                                annotations, config, risk_concerns=None, stub_summary=None):
+                                annotations, _config, risk_concerns=None, stub_summary=None):
     """Generate .gxp/compliance-status.md report."""
     now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
     nodes = traceability['nodes']
@@ -858,35 +864,35 @@ def generate_artifact_stubs(traceability, annotations, config, project_root):
                         linked_specs.append(e2['to'])
 
         content = (
-            f'---\n'
+            '---\n'
             f'gxp_id: {req_id}\n'
             f'title: "{desc}"\n'
             f'description: "{desc}"\n'
             f'risk_level: {risk}\n'
-            f'acceptance_criteria:\n'
-            f'  - "TODO: Define acceptance criteria"\n'
-            f'validation_status: draft\n'
+            'acceptance_criteria:\n'
+            '  - "TODO: Define acceptance criteria"\n'
+            'validation_status: draft\n'
             f'created: "{now}"\n'
             f'updated: "{now}"\n'
-            f'author: "generated-by-gxpmd-harden"\n'
-            f'---\n\n'
+            'author: "generated-by-gxpmd-harden"\n'
+            '---\n\n'
             f'# {req_id}: {desc}\n\n'
-            f'> This stub was auto-generated by `gxpmd-harden.py` from source annotations.\n'
-            f'> Review and flesh out for HIGH risk components.\n\n'
+            '> This stub was auto-generated by `gxpmd-harden.py` from source annotations.\n'
+            '> Review and flesh out for HIGH risk components.\n\n'
         )
 
         if linked_specs:
-            content += f'## Linked Specifications\n\n'
+            content += '## Linked Specifications\n\n'
             for sid in sorted(set(linked_specs)):
                 content += f'- {sid}\n'
             content += '\n'
 
         content += (
-            f'## Regulatory Basis\n\n'
-            f'TODO: Document the regulatory basis for this requirement.\n\n'
-            f'## Risk Justification\n\n'
+            '## Regulatory Basis\n\n'
+            'TODO: Document the regulatory basis for this requirement.\n\n'
+            '## Risk Justification\n\n'
             f'Classified as **{risk}** risk.\n'
-            f'TODO: Document impact analysis and risk justification.\n'
+            'TODO: Document impact analysis and risk justification.\n'
         )
 
         req_file.write_text(content, encoding='utf-8')
@@ -906,35 +912,35 @@ def generate_artifact_stubs(traceability, annotations, config, project_root):
         tests = sorted(set(spec_tests.get(spec_id, [])))
 
         content = (
-            f'---\n'
+            '---\n'
             f'gxp_id: {spec_id}\n'
             f'title: "{desc}"\n'
-            f'verification_tier: OQ\n'
-            f'design_approach: "TODO: Describe implementation approach"\n'
-            f'source_files:\n'
+            'verification_tier: OQ\n'
+            'design_approach: "TODO: Describe implementation approach"\n'
+            'source_files:\n'
         )
         for src in sources:
             content += f'  - "{src}"\n'
         if not sources:
-            content += f'  - "TODO: Link source files"\n'
-        content += f'test_files:\n'
+            content += '  - "TODO: Link source files"\n'
+        content += 'test_files:\n'
         for tst in tests:
             content += f'  - "{tst}"\n'
         if not tests:
-            content += f'  - "TODO: Link test files"\n'
+            content += '  - "TODO: Link test files"\n'
         content += (
-            f'validation_status: draft\n'
+            'validation_status: draft\n'
             f'created: "{now}"\n'
             f'updated: "{now}"\n'
-            f'author: "generated-by-gxpmd-harden"\n'
-            f'---\n\n'
+            'author: "generated-by-gxpmd-harden"\n'
+            '---\n\n'
             f'# {spec_id}: {desc}\n\n'
-            f'> This stub was auto-generated by `gxpmd-harden.py` from source annotations.\n'
-            f'> Review and flesh out for HIGH risk components.\n\n'
-            f'## Design Approach\n\n'
-            f'TODO: Document the technical design.\n\n'
-            f'## Data Flow\n\n'
-            f'TODO: Document data flows and security considerations.\n'
+            '> This stub was auto-generated by `gxpmd-harden.py` from source annotations.\n'
+            '> Review and flesh out for HIGH risk components.\n\n'
+            '## Design Approach\n\n'
+            'TODO: Document the technical design.\n\n'
+            '## Data Flow\n\n'
+            'TODO: Document data flows and security considerations.\n'
         )
 
         spec_file.write_text(content, encoding='utf-8')
@@ -990,7 +996,7 @@ def main():
     gxpmd_path = root / 'GxP.MD'
     if not gxpmd_path.exists():
         print(f'ERROR: No GxP.MD file found at {gxpmd_path}', file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
 
     print(f'Reading config from {gxpmd_path}')
     config = parse_frontmatter(gxpmd_path)

@@ -335,7 +335,7 @@ def validate_batch_record(record: dict, schema: dict) -> ValidationResult:
 - Tags MUST appear in a block comment at the top of the file or immediately preceding the function, class, or module they govern.
 - A single file MAY contain multiple annotation blocks if it implements multiple specifications. Each block governs the code that immediately follows it.
 - Tags MUST use the exact format specified. Deviations (e.g., missing hyphens, incorrect casing of risk levels) will cause annotation validation failures at the pre-commit gate.
-- When multiple IDs are listed, they are comma-separated with no spaces inside the tag value: `@gxp-satisfies REQ-001, REQ-003, REQ-005`.
+- When multiple IDs are listed, they are comma-separated: `@gxp-satisfies REQ-001, REQ-003, REQ-005`.
 
 ### 2.3 Test File Annotations
 

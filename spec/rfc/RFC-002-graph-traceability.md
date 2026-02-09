@@ -9,7 +9,7 @@ category: Architecture
 
 ## Executive Summary
 
-This RFC proposes a transition from GxP.MD v2.1.0's hierarchical ID-scheme traceability model to a directed acyclic graph (DAG) based model in v3. The v2 approach encodes parent-child relationships in alphanumeric IDs (e.g., `SPEC-001-002` → `US-001-002` → `REQ-001`), which creates three critical failure modes:
+This RFC proposes a transition from GxP.MD v2.1.0's hierarchical ID-scheme traceability model to a directed acyclic graph (DAG)-based model in v3. The v2 approach encodes parent-child relationships in alphanumeric IDs (e.g., `SPEC-001-002` → `US-001-002` → `REQ-001`), which creates three critical failure modes:
 
 1. **Impossible many-to-many relationships**: Components cannot satisfy multiple requirements without duplication
 2. **False orphan detection**: Skipped phases (explicitly allowed per Section 5.4) are flagged as missing requirements
@@ -25,7 +25,7 @@ The DAG model replaces ID-encoded parentage with explicit edge tags (`@gxp-satis
 
 In GxP.MD v2.1.0, traceability is encoded in the ID itself:
 
-```
+```text
 REQ-001          (Regulatory Requirement)
   ├── US-001-001 (User Story)
   │   └── SPEC-001-001 (Specification)
@@ -80,7 +80,7 @@ def format_iso8601(timestamp):
 
 The `find_orphans()` function cannot parse an ID from the code because none exists. It infers a phantom `REQ-???` (unknown), then reports:
 
-```
+```text
 ERROR: Orphan SPEC-001 has no parent REQ
 Missing requirement: REQ-001
 ```
@@ -121,14 +121,14 @@ Questions arise:
 ### 2.1 Core Principles
 
 **IDs become opaque**:
-```
+```text
 REQ-001, US-042, SPEC-137, TEST-056
 ```
 
 These are identifiers, not encoded hierarchies. No structural information is derivable from the ID itself.
 
 **Relationships are explicit**:
-```
+```text
 @gxp-satisfies REQ-001, REQ-005
 @gxp-implements US-042
 @gxp-verifies SPEC-137
@@ -192,7 +192,7 @@ For non-hierarchical edges:
 
 The traceability graph is a DAG with node types and edges:
 
-```
+```text
 Nodes:
   - REQ (Regulatory Requirement)
   - US (User Story)
@@ -202,35 +202,35 @@ Nodes:
   - (other phases as needed)
 
 Edges:
-  REQ --satisfies-by--> US
-  REQ --satisfies-by--> SPEC
-  REQ --satisfies-by--> IMPL
-  US --implements-as--> SPEC
-  SPEC --verifies-with--> TEST
+  US --satisfies--> REQ
+  SPEC --satisfies--> REQ
+  IMPL --satisfies--> REQ
+  SPEC --implements--> US
+  TEST --verifies--> SPEC
   SPEC --depends-on--> SPEC
   (multi-target allowed)
 ```
 
 **Example DAG: Audit Trail System**
 
-```
-┌──────────────┐
-│   REQ-001    │ (Immutable audit records)
-│   REQ-002    │ (Log critical ops)
-│   REQ-003    │ (Forensic analysis)
-└──────┬───────┘
-       │ satisfies-by
+```text
+┌────────────────────────┐
+│ TEST-001, TEST-002     │
+│ (Unit + Integration)   │
+└──────┬─────────────────┘
+       │ verifies
        ↓
 ┌─────────────────────┐
 │   IMPL-005          │ (AuditTrail class)
 │   (Implementation)  │
 └──────┬──────────────┘
-       │ verifies-with
+       │ satisfies
        ↓
-┌────────────────────────┐
-│ TEST-001, TEST-002     │
-│ (Unit + Integration)   │
-└────────────────────────┘
+┌──────────────┐
+│   REQ-001    │ (Immutable audit records)
+│   REQ-002    │ (Log critical ops)
+│   REQ-003    │ (Forensic analysis)
+└──────────────┘
 ```
 
 The same IMPL node has incoming edges from all three requirements. No duplication, no ambiguity.
@@ -240,8 +240,8 @@ The same IMPL node has incoming edges from all three requirements. No duplicatio
 **v2 Definition**: A requirement is covered if there exists a chain `REQ → US → SPEC → TEST` with all passing tests.
 
 **v3 Definition**: A requirement is covered if there exists a path in the DAG:
-```
-covered(REQ-001) = ∃ path(REQ-001 → node)
+```text
+covered(REQ-001) = ∃ undirected_path(REQ-001 ↔ node)
   where node.phase ∈ {TEST, VALIDATION}
   ∧ node.result = PASS
 ```
@@ -577,7 +577,7 @@ def test_audit_log(): pass
 ```
 
 **Graph**:
-```
+```text
 REQ-001 ──┐
 REQ-002 ──┼──> SPEC-010 ──> IMPL-010 ──> TEST-010 (PASS)
 REQ-003 ──┘
@@ -625,7 +625,7 @@ class StrictV3Enforcer:
 
 ### 6.2 Feature Flags
 
-```python
+```yaml
 # config/gxp.yaml
 traceability:
   schema_version: "v3"
@@ -701,7 +701,7 @@ The v3 DAG model removes ID-encoding constraints, enabling many-to-many relation
 A pharma system processes payments for clinical trial participant compensation. Requirements span security (REQ-101), auditability (REQ-102), and accuracy (REQ-103).
 
 ### v2 Problem
-```
+```text
 REQ-101 chain: SPEC-101-001, SPEC-101-002
 REQ-102 chain: SPEC-102-001, SPEC-102-002
 REQ-103 chain: SPEC-103-001, SPEC-103-002
@@ -711,7 +711,7 @@ Crypto validation component appears in SPEC-101-001 and SPEC-102-001
 ```
 
 ### v3 Solution
-```
+```text
 Nodes:
   REQ-101: Security (encryption, key management)
   REQ-102: Auditability (log all transactions)
@@ -723,12 +723,12 @@ Nodes:
   TEST-020: test_crypto_validation
 
 Edges:
-  REQ-101 --satisfies-by--> IMPL-010
-  REQ-102 --satisfies-by--> IMPL-010
-  REQ-103 --satisfies-by--> IMPL-010
+  IMPL-010 --satisfies--> REQ-101
+  IMPL-010 --satisfies--> REQ-102
+  IMPL-010 --satisfies--> REQ-103
   IMPL-010 --depends-on--> IMPL-020
-  IMPL-010 --verifies-with--> TEST-010
-  IMPL-020 --verifies-with--> TEST-020
+  TEST-010 --verifies--> IMPL-010
+  TEST-020 --verifies--> IMPL-020
 
 Coverage(REQ-101) = true if TEST-010 and TEST-020 both pass
 ```
@@ -739,7 +739,7 @@ Coverage(REQ-101) = true if TEST-010 and TEST-020 both pass
 
 ## Appendix B: Annotation Reference Card
 
-```
+```text
 # Regulatory Requirement
 # @gxp-id: REQ-001
 # @gxp-phase: REQUIREMENT
