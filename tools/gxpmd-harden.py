@@ -2,9 +2,17 @@
 """
 gxpmd-harden.py — GxP.MD Compliance Sweep Tool
 
-Executes the harden mode compliance sweep defined in GxP.MD v2.1.0.
-Parses annotations from source and test files, builds the traceability
-matrix, validates annotation chains, and generates compliance reports.
+Executes the harden mode compliance sweep defined in GxP.MD v3.0.0.
+Parses annotations from source and test files, builds a directed acyclic graph (DAG)
+of traceability relationships using explicit edge tags, validates annotations,
+and generates compliance reports.
+
+v3 Key Changes:
+- Replaces hierarchical ID-scheme-inferred traceability with explicit edge tags
+- Uses @gxp-satisfies, @gxp-implements, @gxp-verifies, @gxp-derives-from
+- Node IDs are opaque (REQ-NNN, US-NNN, SPEC-NNN) — no parent encoding
+- Supports v2 legacy tags during migration period
+- Graph-based coverage calculation via reachability analysis
 
 Zero external dependencies — stdlib only.
 
@@ -16,7 +24,7 @@ Outputs:
     .gxp/compliance-status.md
     .gxp/gap-analysis.json
     .gxp/requirements/REQ-NNN.md   (stubs, when formal files don't exist)
-    .gxp/specs/SPEC-NNN-NNN.md     (stubs, when formal files don't exist)
+    .gxp/specs/SPEC-NNN.md         (stubs, when formal files don't exist)
 """
 
 import argparse
@@ -30,14 +38,23 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Annotation regex patterns
+# Annotation regex patterns (v3 and legacy v2)
 # ---------------------------------------------------------------------------
 
-RE_GXP_REQ = re.compile(r'@gxp-req\s+(REQ-\d{3})(?:\s+"([^"]*)")?')
-RE_GXP_SPEC = re.compile(r'@gxp-spec\s+(SPEC-\d{3}-\d{3})(?:\s+"([^"]*)")?')
+# v3 Edge tags — declare relationships between nodes
+RE_GXP_SATISFIES = re.compile(r'@gxp-satisfies\s+((?:REQ-\d{3})(?:\s*,\s*REQ-\d{3})*)')
+RE_GXP_IMPLEMENTS = re.compile(r'@gxp-implements\s+((?:(?:US|SPEC)-\d{3})(?:\s*,\s*(?:US|SPEC)-\d{3})*)')
+RE_GXP_VERIFIES = re.compile(r'@gxp-verifies\s+((?:SPEC-\d{3})(?:\s*,\s*SPEC-\d{3})*)')
+RE_GXP_DERIVES_FROM = re.compile(r'@gxp-derives-from\s+((?:(?:REQ|US|SPEC)-\d{3})(?:\s*,\s*(?:REQ|US|SPEC)-\d{3})*)')
+
+# Legacy v2 tags for backward compatibility during migration
+RE_GXP_REQ_LEGACY = re.compile(r'@gxp-req\s+(REQ-\d{3})(?:\s+"([^"]*)")?')
+RE_GXP_SPEC_LEGACY = re.compile(r'@gxp-spec\s+(SPEC-\d{3}(?:-\d{3})?)(?:\s+"([^"]*)")?')
+RE_TRACE_LEGACY = re.compile(r'@trace\s+(US-\d{3}(?:-\d{3})?)')
+
+# Common tags (v2 and v3)
 RE_GXP_RISK = re.compile(r'@gxp-risk\s+(HIGH|MEDIUM|LOW)')
 RE_GXP_RISK_CONCERN = re.compile(r'@gxp-risk-concern\s+"([^"]*)"')
-RE_TRACE = re.compile(r'@trace\s+(US-\d{3}-\d{3})')
 RE_TEST_TYPE = re.compile(r'@test-type\s+(IQ|OQ|PQ)')
 
 # File extensions to scan
@@ -71,8 +88,8 @@ DEFAULT_CONFIG = {
         'LOW': {'coverage_threshold': 60, 'required_tiers': ['OQ']},
     },
     'artifacts_dir': '.gxp',
-    'required_source_tags': ['@gxp-req', '@gxp-spec', '@gxp-risk'],
-    'required_test_tags': ['@gxp-spec', '@trace', '@test-type', '@gxp-risk'],
+    'required_source_tags': ['@gxp-satisfies', '@gxp-implements', '@gxp-risk'],
+    'required_test_tags': ['@gxp-verifies', '@test-type', '@gxp-risk'],
 }
 
 
@@ -129,8 +146,16 @@ def find_source_files(root: Path) -> list[Path]:
 # Annotation parsing
 # ---------------------------------------------------------------------------
 
+def _parse_id_list(match_str: str) -> list[str]:
+    """Parse 'REQ-001, REQ-003' into ['REQ-001', 'REQ-003']"""
+    return [id.strip() for id in match_str.split(',') if id.strip()]
+
+
 def parse_annotations(filepath: Path, root: Path) -> dict:
-    """Parse all GxP annotations from a single file."""
+    """Parse all GxP annotations from a single file.
+
+    Returns dict with v3 edge tags and legacy v2 tags for backward compatibility.
+    """
     try:
         content = filepath.read_text(encoding='utf-8', errors='replace')
     except (OSError, UnicodeDecodeError):
@@ -139,25 +164,51 @@ def parse_annotations(filepath: Path, root: Path) -> dict:
     rel_path = str(filepath.relative_to(root))
     is_test = _is_test_file(rel_path)
 
-    reqs = RE_GXP_REQ.findall(content)
-    specs = RE_GXP_SPEC.findall(content)
+    # Parse v3 edge tags
+    satisfies_match = RE_GXP_SATISFIES.search(content)
+    satisfies_ids = _parse_id_list(satisfies_match.group(1)) if satisfies_match else []
+
+    implements_match = RE_GXP_IMPLEMENTS.search(content)
+    implements_ids = _parse_id_list(implements_match.group(1)) if implements_match else []
+
+    verifies_match = RE_GXP_VERIFIES.search(content)
+    verifies_ids = _parse_id_list(verifies_match.group(1)) if verifies_match else []
+
+    derives_from_match = RE_GXP_DERIVES_FROM.search(content)
+    derives_from_ids = _parse_id_list(derives_from_match.group(1)) if derives_from_match else []
+
+    # Parse common tags
     risks = RE_GXP_RISK.findall(content)
     risk_concerns = RE_GXP_RISK_CONCERN.findall(content)
-    traces = RE_TRACE.findall(content)
     test_types = RE_TEST_TYPE.findall(content)
 
-    if not any([reqs, specs, risks, traces, test_types, risk_concerns]):
+    # Parse legacy v2 tags
+    legacy_reqs = RE_GXP_REQ_LEGACY.findall(content)
+    legacy_specs = RE_GXP_SPEC_LEGACY.findall(content)
+    legacy_traces = RE_TRACE_LEGACY.findall(content)
+
+    has_annotations = any([
+        satisfies_ids, implements_ids, verifies_ids, derives_from_ids,
+        legacy_reqs, legacy_specs, risks, risk_concerns, legacy_traces, test_types
+    ])
+
+    if not has_annotations:
         return None
 
     return {
         'file': rel_path,
         'is_test': is_test,
-        'requirements': [{'id': r[0], 'desc': r[1]} for r in reqs],
-        'specifications': [{'id': s[0], 'desc': s[1]} for s in specs],
+        'satisfies': satisfies_ids,
+        'implements': implements_ids,
+        'verifies': verifies_ids,
+        'derives_from': derives_from_ids,
         'risk_levels': risks,
         'risk_concerns': risk_concerns,
-        'traces': traces,
         'test_types': test_types,
+        # Legacy fields for backward compat:
+        'requirements': [{'id': r[0], 'desc': r[1]} for r in legacy_reqs],
+        'specifications': [{'id': s[0], 'desc': s[1]} for s in legacy_specs],
+        'traces': legacy_traces,
     }
 
 
@@ -172,161 +223,171 @@ def _is_test_file(rel_path: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Traceability matrix construction
+# Traceability graph construction
 # ---------------------------------------------------------------------------
 
-def build_traceability(annotations: list[dict]) -> dict:
-    """Build the REQ -> US -> SPEC -> CODE -> TEST traceability chains."""
+_RISK_ORDER = {'HIGH': 3, 'MEDIUM': 2, 'LOW': 1, 'UNKNOWN': 0}
 
-    # Index: spec_id -> list of source files
-    spec_to_source = defaultdict(list)
-    # Index: spec_id -> list of test files
-    spec_to_tests = defaultdict(list)
-    # Index: req_id -> list of source files
-    req_to_source = defaultdict(list)
-    # Index: req_id -> set of risk levels
-    req_risk = defaultdict(set)
-    # Index: spec_id -> set of test types (tiers)
-    spec_tiers = defaultdict(set)
-    # Index: spec_id -> set of traced user stories
-    spec_traces = defaultdict(set)
-    # All known IDs
-    all_req_ids = set()
-    all_spec_ids = set()
-    all_us_ids = set()
+
+def _ensure_node(nodes, node_id, phase, risk=None, title=None, file=None):
+    """Ensure a node exists in the graph with given properties."""
+    if node_id not in nodes:
+        nodes[node_id] = {'phase': phase, 'risk': risk, 'files': [], 'title': title, 'tiers': set()}
+    if risk:
+        existing_risk = nodes[node_id].get('risk')
+        if not existing_risk or _RISK_ORDER.get(risk, 0) > _RISK_ORDER.get(existing_risk, 0):
+            nodes[node_id]['risk'] = risk
+    if title and not nodes[node_id].get('title'):
+        nodes[node_id]['title'] = title
+    if file and file not in nodes[node_id]['files']:
+        nodes[node_id]['files'].append(file)
+
+
+def _file_node_id(filepath: str) -> str:
+    """Generate a deterministic node ID from a filepath."""
+    return f'FILE:{filepath}'
+
+
+def _infer_phase(node_id: str) -> str:
+    """Infer the phase of a node from its ID prefix."""
+    if node_id.startswith('REQ-'):
+        return 'requirement'
+    if node_id.startswith('US-'):
+        return 'user_story'
+    if node_id.startswith('SPEC-'):
+        return 'specification'
+    return 'unknown'
+
+
+def build_traceability(annotations: list[dict]) -> dict:
+    """Build the traceability DAG from explicit edge tags.
+
+    v3: Uses @gxp-satisfies, @gxp-implements, @gxp-verifies edge tags
+    instead of inferring relationships from ID encoding.
+    """
+    # Build adjacency list (DAG)
+    nodes = {}  # id -> {phase, risk, title, files, tiers}
+    edges = []  # list of {from, to, type, source_file}
 
     for ann in annotations:
         f = ann['file']
-        for r in ann['requirements']:
-            all_req_ids.add(r['id'])
-            if not ann['is_test']:
-                req_to_source[r['id']].append(f)
-        for s in ann['specifications']:
-            all_spec_ids.add(s['id'])
-            if ann['is_test']:
-                spec_to_tests[s['id']].append(f)
-            else:
-                spec_to_source[s['id']].append(f)
-        for risk in ann['risk_levels']:
-            for r in ann['requirements']:
-                req_risk[r['id']].add(risk)
-            for s in ann['specifications']:
-                req_id = _spec_to_req(s['id'])
-                if req_id:
-                    req_risk[req_id].add(risk)
-        for tier in ann['test_types']:
-            for s in ann['specifications']:
-                spec_tiers[s['id']].add(tier)
-        for us in ann['traces']:
-            all_us_ids.add(us)
-            for s in ann['specifications']:
-                spec_traces[s['id']].add(us)
+        risk = ann['risk_levels'][0] if ann['risk_levels'] else 'UNKNOWN'
 
-    # Group specs by requirement using ID convention
-    req_to_specs = defaultdict(set)
-    for spec_id in all_spec_ids:
-        req_id = _spec_to_req(spec_id)
-        if req_id:
-            req_to_specs[req_id].add(spec_id)
+        # Register nodes from edge tags
+        for req_id in ann.get('satisfies', []):
+            _ensure_node(nodes, req_id, 'requirement', risk=risk)
+            # The file satisfies this requirement
+            file_node_id = _file_node_id(f)
+            _ensure_node(nodes, file_node_id, 'test' if ann['is_test'] else 'code', risk=risk, file=f)
+            edges.append({'from': file_node_id, 'to': req_id, 'type': 'satisfies', 'source_file': f})
 
-    # Infer user stories from spec IDs (SPEC-NNN-MMM -> US-NNN-MMM)
-    req_to_us = defaultdict(set)
-    for us_id in all_us_ids:
-        req_id = _us_to_req(us_id)
-        if req_id:
-            req_to_us[req_id].add(us_id)
+        for impl_id in ann.get('implements', []):
+            phase = 'user_story' if impl_id.startswith('US-') else 'specification'
+            _ensure_node(nodes, impl_id, phase, risk=risk)
+            file_node_id = _file_node_id(f)
+            _ensure_node(nodes, file_node_id, 'test' if ann['is_test'] else 'code', risk=risk, file=f)
+            edges.append({'from': file_node_id, 'to': impl_id, 'type': 'implements', 'source_file': f})
 
-    # Also infer from spec IDs
-    for spec_id in all_spec_ids:
-        us_id = _spec_to_us(spec_id)
-        if us_id:
-            req_id = _us_to_req(us_id)
-            if req_id:
-                req_to_us[req_id].add(us_id)
+        for ver_id in ann.get('verifies', []):
+            _ensure_node(nodes, ver_id, 'specification', risk=risk)
+            file_node_id = _file_node_id(f)
+            _ensure_node(nodes, file_node_id, 'test' if ann['is_test'] else 'code', risk=risk, file=f)
+            edges.append({'from': file_node_id, 'to': ver_id, 'type': 'verifies', 'source_file': f})
+            # Record test tiers for this verification
+            for tier in ann.get('test_types', []):
+                nodes[file_node_id].setdefault('tiers', set()).add(tier)
 
-    # Ensure all referenced REQs exist
-    for spec_id in all_spec_ids:
-        req_id = _spec_to_req(spec_id)
-        if req_id:
-            all_req_ids.add(req_id)
+        for der_id in ann.get('derives_from', []):
+            phase = _infer_phase(der_id)
+            _ensure_node(nodes, der_id, phase)
+            # @gxp-derives-from creates a dependency edge: the artifact declared
+            # by this file's other edge tags (satisfies/implements/verifies) depends
+            # on der_id. E.g., if file declares @gxp-implements SPEC-002 and
+            # @gxp-derives-from SPEC-001, the edge is SPEC-002 → SPEC-001
+            # (meaning SPEC-002 derives from / depends on SPEC-001).
+            for own_id in ann.get('satisfies', []) + ann.get('implements', []) + ann.get('verifies', []):
+                edges.append({'from': own_id, 'to': der_id, 'type': 'derives_from', 'source_file': f})
 
-    # Build chains
-    chains = []
-    for req_id in sorted(all_req_ids):
-        specs = sorted(req_to_specs.get(req_id, set()))
-        user_stories = sorted(req_to_us.get(req_id, set()))
-        source_files = sorted(set(
-            f for sid in specs for f in spec_to_source.get(sid, [])
-        ) | set(req_to_source.get(req_id, [])))
-        test_files = sorted(set(
-            f for sid in specs for f in spec_to_tests.get(sid, [])
-        ))
-        tiers_present = sorted(set(
-            t for sid in specs for t in spec_tiers.get(sid, set())
-        ))
-        risk = _resolve_risk(req_risk.get(req_id, set()))
-        traced_us = sorted(set(
-            us for sid in specs for us in spec_traces.get(sid, set())
-        ))
+        # Legacy v2 compat: convert old tags to edges
+        for r in ann.get('requirements', []):
+            _ensure_node(nodes, r['id'], 'requirement', title=r.get('desc'))
+            file_node_id = _file_node_id(f)
+            _ensure_node(nodes, file_node_id, 'test' if ann['is_test'] else 'code', risk=risk, file=f)
+            edges.append({'from': file_node_id, 'to': r['id'], 'type': 'satisfies', 'source_file': f})
 
-        has_source = len(source_files) > 0
-        has_tests = len(test_files) > 0
-        has_specs = len(specs) > 0
+        for s in ann.get('specifications', []):
+            _ensure_node(nodes, s['id'], 'specification', title=s.get('desc'))
+            file_node_id = _file_node_id(f)
+            _ensure_node(nodes, file_node_id, 'test' if ann['is_test'] else 'code', risk=risk, file=f)
+            edge_type = 'verifies' if ann['is_test'] else 'implements'
+            edges.append({'from': file_node_id, 'to': s['id'], 'type': edge_type, 'source_file': f})
 
-        if has_source and has_tests and has_specs:
-            status = 'COMPLETE'
-        elif has_source or has_tests or has_specs:
-            status = 'PARTIAL'
-        else:
-            status = 'MISSING'
+        for us_id in ann.get('traces', []):
+            _ensure_node(nodes, us_id, 'user_story')
+            file_node_id = _file_node_id(f)
+            _ensure_node(nodes, file_node_id, 'test' if ann['is_test'] else 'code', risk=risk, file=f)
+            edges.append({'from': file_node_id, 'to': us_id, 'type': 'verifies', 'source_file': f})
 
-        chains.append({
-            'requirement': req_id,
-            'user_stories': user_stories,
-            'specifications': specs,
-            'source_files': source_files,
-            'test_files': test_files,
-            'risk_level': risk,
-            'tiers_present': tiers_present,
-            'traced_user_stories': traced_us,
-            'status': status,
-        })
+    # Calculate coverage via graph reachability
+    coverage = _calculate_coverage(nodes, edges)
 
     return {
-        'chains': chains,
-        'all_req_ids': sorted(all_req_ids),
-        'all_spec_ids': sorted(all_spec_ids),
-        'all_us_ids': sorted(all_us_ids),
+        'nodes': nodes,
+        'edges': edges,
+        'coverage': coverage,
     }
 
 
-def _spec_to_req(spec_id: str) -> str | None:
-    """SPEC-001-002 -> REQ-001"""
-    m = re.match(r'SPEC-(\d{3})-\d{3}', spec_id)
-    return f'REQ-{m.group(1)}' if m else None
+def _calculate_coverage(nodes, edges):
+    """Calculate which requirements are covered via graph reachability.
 
+    A requirement is covered if there exists a path connecting a test node
+    to the requirement through the edge graph (undirected traversal).
 
-def _spec_to_us(spec_id: str) -> str | None:
-    """SPEC-001-002 -> US-001-002"""
-    m = re.match(r'SPEC-(\d{3}-\d{3})', spec_id)
-    return f'US-{m.group(1)}' if m else None
+    Undirected traversal is necessary because edges point from satisfier
+    to satisfied (e.g., FILE:src → REQ, FILE:test → SPEC, FILE:src → SPEC).
+    A typical multi-hop path crosses through shared SPEC nodes:
+    FILE:test → SPEC ← FILE:src → REQ. Reverse-only traversal from REQ
+    would reach FILE:src but dead-end without discovering the test node.
+    """
+    # Build undirected adjacency list (both directions)
+    undirected_adj = defaultdict(list)
+    for edge in edges:
+        undirected_adj[edge['to']].append(edge['from'])
+        undirected_adj[edge['from']].append(edge['to'])
 
+    # For each requirement, check if any test node is connected
+    req_nodes = {nid: n for nid, n in nodes.items() if n['phase'] == 'requirement'}
+    coverage = {}
 
-def _us_to_req(us_id: str) -> str | None:
-    """US-001-002 -> REQ-001"""
-    m = re.match(r'US-(\d{3})-\d{3}', us_id)
-    return f'REQ-{m.group(1)}' if m else None
+    for req_id, req_node in req_nodes.items():
+        # BFS: find all nodes connected to this requirement
+        visited = set()
+        queue = [req_id]
+        visited.add(req_id)
+        test_nodes_found = []
 
+        while queue:
+            current = queue.pop(0)
+            for neighbor in undirected_adj.get(current, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+                    # Check if this is a test node
+                    if neighbor in nodes:
+                        if nodes[neighbor].get('phase') == 'test':
+                            test_nodes_found.append(neighbor)
+                        elif neighbor.startswith('FILE:') and _is_test_file(neighbor[5:]):
+                            test_nodes_found.append(neighbor)
 
-def _resolve_risk(risks: set) -> str:
-    """Given a set of risk levels, return the highest."""
-    if 'HIGH' in risks:
-        return 'HIGH'
-    if 'MEDIUM' in risks:
-        return 'MEDIUM'
-    if 'LOW' in risks:
-        return 'LOW'
-    return 'UNKNOWN'
+        coverage[req_id] = {
+            'risk': req_node.get('risk', 'UNKNOWN'),
+            'covered': len(test_nodes_found) > 0,
+            'test_nodes': test_nodes_found,
+            'reachable_nodes': len(visited),
+        }
+
+    return coverage
 
 
 # ---------------------------------------------------------------------------
@@ -340,106 +401,117 @@ def validate_annotations(annotations: list[dict], config: dict) -> list[dict]:
     for ann in annotations:
         f = ann['file']
         risk_levels = ann['risk_levels']
-        specs = [s['id'] for s in ann['specifications']]
+        has_edges = (ann.get('satisfies') or ann.get('implements') or
+                     ann.get('verifies') or ann.get('derives_from'))
+        has_legacy = (ann.get('requirements') or ann.get('specifications') or ann.get('traces'))
 
         if ann['is_test']:
-            # Test files need: @gxp-spec, @trace, @test-type, @gxp-risk
-            if not specs:
+            if not ann.get('verifies') and not ann.get('specifications'):
                 issues.append({
                     'file': f, 'severity': 'ERROR',
-                    'message': 'Test file missing @gxp-spec annotation',
-                })
-            if not ann['traces']:
-                issues.append({
-                    'file': f, 'severity': 'WARNING',
-                    'message': 'Test file missing @trace annotation',
+                    'message': 'Test file missing @gxp-verifies (or legacy @gxp-spec) annotation'
                 })
             if not ann['test_types']:
                 issues.append({
                     'file': f, 'severity': 'ERROR',
-                    'message': 'Test file missing @test-type annotation',
+                    'message': 'Test file missing @test-type annotation'
                 })
             if not risk_levels:
                 issues.append({
                     'file': f, 'severity': 'ERROR',
-                    'message': 'Test file missing @gxp-risk annotation',
+                    'message': 'Test file missing @gxp-risk annotation'
                 })
         else:
-            # Source files need: @gxp-req, @gxp-spec, @gxp-risk
-            if not ann['requirements']:
-                # Only warning — LOW risk files MAY omit @gxp-req
+            if not has_edges and not has_legacy:
                 if risk_levels and risk_levels[0] != 'LOW':
                     issues.append({
-                        'file': f, 'severity': 'WARNING',
-                        'message': 'Source file missing @gxp-req annotation',
+                        'file': f, 'severity': 'ERROR',
+                        'message': 'Source file has no traceability edge tags (@gxp-satisfies, @gxp-implements)'
                     })
-            if not specs:
-                issues.append({
-                    'file': f, 'severity': 'ERROR',
-                    'message': 'Source file missing @gxp-spec annotation',
-                })
             if not risk_levels:
                 issues.append({
                     'file': f, 'severity': 'ERROR',
-                    'message': 'Source file missing @gxp-risk annotation',
+                    'message': 'Source file missing @gxp-risk annotation'
                 })
 
-        # Check for inconsistent risk levels within a file
+        # Warn about legacy tags (v2)
+        if has_legacy and not has_edges:
+            issues.append({
+                'file': f, 'severity': 'WARNING',
+                'message': 'File uses v2 legacy tags (@gxp-req/@gxp-spec/@trace). Migrate to v3 edge tags (@gxp-satisfies/@gxp-implements/@gxp-verifies)'
+            })
+
         if len(set(risk_levels)) > 1:
             issues.append({
                 'file': f, 'severity': 'WARNING',
-                'message': f'File has mixed risk levels: {", ".join(set(risk_levels))}',
+                'message': f'File has mixed risk levels: {", ".join(set(risk_levels))}'
             })
 
     return issues
 
 
-def find_orphans(traceability: dict, annotations: list[dict]) -> list[dict]:
-    """Find annotation IDs that don't resolve to any other annotation."""
+def find_orphans(traceability: dict, _annotations: list[dict]) -> list[dict]:
+    """Find nodes with no incoming or outgoing edges (disconnected from graph)."""
     issues = []
-    all_req_ids = set(traceability['all_req_ids'])
-    all_spec_ids = set(traceability['all_spec_ids'])
-    all_us_ids = set(traceability['all_us_ids'])
+    nodes = traceability['nodes']
+    edges = traceability['edges']
 
-    for ann in annotations:
-        f = ann['file']
-        for spec in ann['specifications']:
-            # Every SPEC should have a corresponding source or test file
-            req_id = _spec_to_req(spec['id'])
-            if req_id and req_id not in all_req_ids:
-                # SPEC references a REQ that has no @gxp-req annotation
-                issues.append({
-                    'file': f, 'severity': 'WARNING',
-                    'message': f'{spec["id"]} implies {req_id} but no @gxp-req {req_id} found',
-                })
+    # Build sets of nodes with edges
+    nodes_with_outgoing = set(e['from'] for e in edges)
+    nodes_with_incoming = set(e['to'] for e in edges)
 
-        for us in ann['traces']:
-            # Every @trace US should have a corresponding SPEC
-            expected_spec_prefix = 'SPEC-' + us[3:]  # US-001-002 -> SPEC-001-002
-            if expected_spec_prefix not in all_spec_ids:
-                issues.append({
-                    'file': f, 'severity': 'WARNING',
-                    'message': f'@trace {us} has no corresponding {expected_spec_prefix} annotation',
-                })
+    for node_id, node in nodes.items():
+        if node_id.startswith('FILE:'):
+            continue  # File nodes are always connected by definition
+
+        has_outgoing = node_id in nodes_with_outgoing
+        has_incoming = node_id in nodes_with_incoming
+
+        if not has_outgoing and not has_incoming:
+            issues.append({
+                'node': node_id,
+                'severity': 'ERROR' if node.get('risk') == 'HIGH' else 'WARNING',
+                'message': f'{node_id} is completely disconnected from the traceability graph',
+            })
+        elif node['phase'] == 'requirement' and not has_incoming:
+            # Requirements should have at least one incoming edge (something satisfies them)
+            issues.append({
+                'node': node_id,
+                'severity': 'WARNING',
+                'message': f'{node_id} has no code or specs satisfying it',
+            })
+        elif node['phase'] == 'specification' and not has_incoming:
+            issues.append({
+                'node': node_id,
+                'severity': 'WARNING',
+                'message': f'{node_id} has no tests verifying it',
+            })
 
     return issues
 
-
-# ---------------------------------------------------------------------------
-# Coverage analysis
-# ---------------------------------------------------------------------------
 
 def analyze_coverage(traceability: dict, config: dict,
                      coverage_data: dict | None) -> list[dict]:
     """Check coverage thresholds and tier requirements."""
     issues = []
     matrix = config['risk_matrix']
+    nodes = traceability['nodes']
+    edges = traceability['edges']
 
-    for chain in traceability['chains']:
-        risk = chain['risk_level']
+    # Extract requirement nodes
+    req_nodes = {nid: n for nid, n in nodes.items() if n['phase'] == 'requirement'}
+
+    # Build undirected adjacency once for all requirements
+    undirected_adj = defaultdict(list)
+    for edge in edges:
+        undirected_adj[edge['to']].append(edge['from'])
+        undirected_adj[edge['from']].append(edge['to'])
+
+    for req_id, req_node in req_nodes.items():
+        risk = req_node.get('risk', 'UNKNOWN')
         if risk == 'UNKNOWN':
             issues.append({
-                'requirement': chain['requirement'],
+                'requirement': req_id,
                 'severity': 'WARNING',
                 'message': 'No risk level assigned',
             })
@@ -447,33 +519,49 @@ def analyze_coverage(traceability: dict, config: dict,
 
         level_config = matrix.get(risk, {})
         required_tiers = set(level_config.get('required_tiers', []))
-        present_tiers = set(chain['tiers_present'])
-        missing_tiers = required_tiers - present_tiers
 
+        # Find all test nodes connected to this requirement via undirected BFS
+        test_tiers = set()
+        queue = [req_id]
+        visited = set([req_id])
+        test_files = []
+
+        while queue:
+            current = queue.pop(0)
+            for neighbor in undirected_adj.get(current, []):
+                if neighbor not in visited:
+                    visited.add(neighbor)
+                    queue.append(neighbor)
+                    if neighbor in nodes and nodes[neighbor].get('phase') == 'test':
+                        test_tiers.update(nodes[neighbor].get('tiers', set()))
+                        if 'files' in nodes[neighbor]:
+                            test_files.extend(nodes[neighbor]['files'])
+
+        missing_tiers = required_tiers - test_tiers
         if missing_tiers:
             issues.append({
-                'requirement': chain['requirement'],
+                'requirement': req_id,
                 'severity': 'ERROR',
                 'message': f'{risk} risk requires tiers {sorted(required_tiers)} '
-                           f'but only {sorted(present_tiers)} present. '
+                           f'but only {sorted(test_tiers)} present. '
                            f'Missing: {sorted(missing_tiers)}',
             })
 
-        if not chain['test_files']:
+        if not test_files:
             issues.append({
-                'requirement': chain['requirement'],
+                'requirement': req_id,
                 'severity': 'ERROR',
-                'message': 'No test files found for this requirement chain',
+                'message': 'No test files found for this requirement',
             })
 
         # Coverage threshold check (if coverage data available)
         if coverage_data:
             threshold = level_config.get('coverage_threshold', 0)
-            for src in chain['source_files']:
+            for src in req_node.get('files', []):
                 file_cov = _get_file_coverage(src, coverage_data)
                 if file_cov is not None and file_cov < threshold:
                     issues.append({
-                        'requirement': chain['requirement'],
+                        'requirement': req_id,
                         'severity': 'ERROR',
                         'message': f'{src}: coverage {file_cov:.1f}% < '
                                    f'{threshold}% threshold for {risk} risk',
@@ -484,7 +572,6 @@ def analyze_coverage(traceability: dict, config: dict,
 
 def _get_file_coverage(filepath: str, coverage_data: dict) -> float | None:
     """Extract coverage percentage for a file from coverage-summary.json format."""
-    # Support Istanbul/nyc coverage-summary.json format
     if isinstance(coverage_data, dict):
         for key in [filepath, './' + filepath, '/' + filepath]:
             if key in coverage_data:
@@ -500,55 +587,79 @@ def _get_file_coverage(filepath: str, coverage_data: dict) -> float | None:
 # Report generation
 # ---------------------------------------------------------------------------
 
-def generate_traceability_matrix(traceability: dict, config: dict,
-                                  project_root: Path) -> dict:
+def generate_traceability_matrix(traceability, config, project_root):
     """Generate the .gxp/traceability-matrix.json output."""
     now = datetime.now(timezone.utc).isoformat()
+    nodes = traceability['nodes']
+    edges = traceability['edges']
+    coverage = traceability['coverage']
 
-    chains_output = []
-    for chain in traceability['chains']:
-        chains_output.append({
-            'requirement': chain['requirement'],
-            'user_stories': chain['user_stories'],
-            'specifications': chain['specifications'],
-            'source_files': chain['source_files'],
-            'test_files': chain['test_files'],
-            'risk_level': chain['risk_level'],
-            'tiers_present': chain['tiers_present'],
-            'status': chain['status'],
+    nodes_output = {}
+    for nid, n in sorted(nodes.items()):
+        nodes_output[nid] = {
+            'phase': n['phase'],
+            'risk': n.get('risk'),
+            'title': n.get('title'),
+            'files': n.get('files', []),
+            'tiers': sorted(n.get('tiers', set())),
+            'covered': coverage.get(nid, {}).get('covered', False) if n['phase'] == 'requirement' else None,
+        }
+
+    edges_output = []
+    for e in edges:
+        edges_output.append({
+            'from': e['from'],
+            'to': e['to'],
+            'type': e['type'],
+            'source_file': e.get('source_file')
         })
 
-    complete = sum(1 for c in chains_output if c['status'] == 'COMPLETE')
-    partial = sum(1 for c in chains_output if c['status'] == 'PARTIAL')
-    missing = sum(1 for c in chains_output if c['status'] == 'MISSING')
+    # Coverage summary by risk
+    coverage_by_risk = defaultdict(lambda: {'total': 0, 'covered': 0})
+    for req_id, cov in coverage.items():
+        risk = cov.get('risk', 'UNKNOWN')
+        coverage_by_risk[risk]['total'] += 1
+        if cov.get('covered'):
+            coverage_by_risk[risk]['covered'] += 1
+
+    for risk in coverage_by_risk:
+        t = coverage_by_risk[risk]['total']
+        c = coverage_by_risk[risk]['covered']
+        coverage_by_risk[risk]['percentage'] = round((c / t * 100) if t > 0 else 0, 1)
 
     return {
+        'gxpmd_version': '3.0.0',
         'generated_at': now,
-        'gxpmd_version': '2.1.0',
         'project_root': str(project_root),
-        'chains': chains_output,
         'summary': {
-            'total_requirements': len(chains_output),
-            'complete_chains': complete,
-            'partial_chains': partial,
-            'missing_chains': missing,
+            'total_nodes': len(nodes_output),
+            'total_edges': len(edges_output),
+            'total_requirements': len(coverage),
+            'covered_requirements': sum(1 for c in coverage.values() if c.get('covered')),
+            'coverage_by_risk': dict(coverage_by_risk),
         },
+        'nodes': nodes_output,
+        'edges': edges_output,
+        'coverage': {k: {
+            'risk': v['risk'],
+            'covered': v['covered'],
+            'test_nodes': v.get('test_nodes', []),
+            'reachable_nodes': v.get('reachable_nodes', 0),
+        } for k, v in coverage.items()},
     }
 
 
-def generate_compliance_status(traceability: dict, validation_issues: list,
-                                orphan_issues: list, coverage_issues: list,
-                                annotations: list, config: dict,
-                                risk_concerns: list | None = None,
-                                stub_summary: dict | None = None) -> str:
+def generate_compliance_status(traceability, validation_issues, orphan_issues, coverage_issues,
+                                annotations, _config, risk_concerns=None, stub_summary=None):
     """Generate .gxp/compliance-status.md report."""
     now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
-    chains = traceability['chains']
+    nodes = traceability['nodes']
+    coverage = traceability['coverage']
 
-    total_reqs = len(chains)
-    complete = sum(1 for c in chains if c['status'] == 'COMPLETE')
-    partial = sum(1 for c in chains if c['status'] == 'PARTIAL')
-    missing = sum(1 for c in chains if c['status'] == 'MISSING')
+    # Count coverage by status
+    total_reqs = len(coverage)
+    covered_reqs = sum(1 for c in coverage.values() if c.get('covered'))
+    uncovered_reqs = total_reqs - covered_reqs
 
     annotated_source = sum(1 for a in annotations if not a['is_test'])
     annotated_test = sum(1 for a in annotations if a['is_test'])
@@ -557,15 +668,17 @@ def generate_compliance_status(traceability: dict, validation_issues: list,
     errors = [i for i in all_issues if i.get('severity') == 'ERROR']
     warnings = [i for i in all_issues if i.get('severity') == 'WARNING']
 
-    high_risk = [c for c in chains if c['risk_level'] == 'HIGH']
-    medium_risk = [c for c in chains if c['risk_level'] == 'MEDIUM']
-    low_risk = [c for c in chains if c['risk_level'] == 'LOW']
+    # Risk distribution
+    req_nodes = {nid: n for nid, n in nodes.items() if n['phase'] == 'requirement'}
+    high_risk = [nid for nid, n in req_nodes.items() if n.get('risk') == 'HIGH']
+    medium_risk = [nid for nid, n in req_nodes.items() if n.get('risk') == 'MEDIUM']
+    low_risk = [nid for nid, n in req_nodes.items() if n.get('risk') == 'LOW']
 
     lines = [
         '# Compliance Status Report',
         '',
         f'Generated: {now}',
-        'GxP.MD Version: 2.1.0',
+        'GxP.MD Version: 3.0.0',
         '',
         '---',
         '',
@@ -574,9 +687,8 @@ def generate_compliance_status(traceability: dict, validation_issues: list,
         '| Metric | Value |',
         '|--------|-------|',
         f'| Total requirements | {total_reqs} |',
-        f'| Complete chains | {complete}/{total_reqs} |',
-        f'| Partial chains | {partial}/{total_reqs} |',
-        f'| Missing chains | {missing}/{total_reqs} |',
+        f'| Covered requirements | {covered_reqs}/{total_reqs} |',
+        f'| Uncovered requirements | {uncovered_reqs}/{total_reqs} |',
         f'| Annotated source files | {annotated_source} |',
         f'| Annotated test files | {annotated_test} |',
         f'| Errors | {len(errors)} |',
@@ -584,11 +696,11 @@ def generate_compliance_status(traceability: dict, validation_issues: list,
         '',
         '## Risk Distribution',
         '',
-        '| Risk Level | Requirements | Complete |',
-        '|------------|-------------|----------|',
-        f'| HIGH | {len(high_risk)} | {sum(1 for c in high_risk if c["status"] == "COMPLETE")}/{len(high_risk)} |',
-        f'| MEDIUM | {len(medium_risk)} | {sum(1 for c in medium_risk if c["status"] == "COMPLETE")}/{len(medium_risk)} |',
-        f'| LOW | {len(low_risk)} | {sum(1 for c in low_risk if c["status"] == "COMPLETE")}/{len(low_risk)} |',
+        '| Risk Level | Requirements | Covered |',
+        '|------------|-------------|---------|',
+        f'| HIGH | {len(high_risk)} | {sum(1 for r in high_risk if coverage[r].get("covered"))}/{len(high_risk)} |',
+        f'| MEDIUM | {len(medium_risk)} | {sum(1 for r in medium_risk if coverage[r].get("covered"))}/{len(medium_risk)} |',
+        f'| LOW | {len(low_risk)} | {sum(1 for r in low_risk if coverage[r].get("covered"))}/{len(low_risk)} |',
         '',
     ]
 
@@ -598,7 +710,7 @@ def generate_compliance_status(traceability: dict, validation_issues: list,
             '',
         ])
         for issue in errors:
-            loc = issue.get('file', issue.get('requirement', '?'))
+            loc = issue.get('file', issue.get('node', issue.get('requirement', '?')))
             lines.append(f'- **{loc}**: {issue["message"]}')
         lines.append('')
 
@@ -608,26 +720,25 @@ def generate_compliance_status(traceability: dict, validation_issues: list,
             '',
         ])
         for issue in warnings:
-            loc = issue.get('file', issue.get('requirement', '?'))
+            loc = issue.get('file', issue.get('node', issue.get('requirement', '?')))
             lines.append(f'- **{loc}**: {issue["message"]}')
         lines.append('')
 
-    # Traceability chain details
+    # Traceability details
     lines.extend([
-        '## Traceability Chains',
+        '## Traceability Coverage',
         '',
     ])
-    for chain in chains:
-        status_icon = {'COMPLETE': 'PASS', 'PARTIAL': 'PARTIAL', 'MISSING': 'FAIL'}
-        icon = status_icon.get(chain['status'], '?')
-        lines.append(f'### {chain["requirement"]} [{icon}]')
+    for req_id in sorted(req_nodes.keys()):
+        cov = coverage.get(req_id, {})
+        status_icon = 'PASS' if cov.get('covered') else 'FAIL'
+        risk = req_nodes[req_id].get('risk', 'UNKNOWN')
+        lines.append(f'### {req_id} [{status_icon}]')
         lines.append('')
-        lines.append(f'- **Risk**: {chain["risk_level"]}')
-        lines.append(f'- **Specs**: {", ".join(chain["specifications"]) or "none"}')
-        lines.append(f'- **User Stories**: {", ".join(chain["user_stories"]) or "none"}')
-        lines.append(f'- **Source Files**: {", ".join(chain["source_files"]) or "none"}')
-        lines.append(f'- **Test Files**: {", ".join(chain["test_files"]) or "none"}')
-        lines.append(f'- **Tiers**: {", ".join(chain["tiers_present"]) or "none"}')
+        lines.append(f'- **Risk**: {risk}')
+        lines.append(f'- **Coverage**: {"Verified" if cov.get("covered") else "Not verified"}')
+        if cov.get('test_nodes'):
+            lines.append(f'- **Test Nodes**: {", ".join(cov["test_nodes"][:5])}')
         lines.append('')
 
     # Risk concerns section
@@ -675,15 +786,14 @@ def generate_compliance_status(traceability: dict, validation_issues: list,
     return '\n'.join(lines)
 
 
-def generate_gap_analysis(validation_issues: list, orphan_issues: list,
-                           coverage_issues: list) -> dict:
+def generate_gap_analysis(validation_issues, orphan_issues, coverage_issues):
     """Generate .gxp/gap-analysis.json output."""
     now = datetime.now(timezone.utc).isoformat()
     all_issues = validation_issues + orphan_issues + coverage_issues
 
     return {
         'generated_at': now,
-        'gxpmd_version': '2.1.0',
+        'gxpmd_version': '3.0.0',
         'total_issues': len(all_issues),
         'errors': len([i for i in all_issues if i.get('severity') == 'ERROR']),
         'warnings': len([i for i in all_issues if i.get('severity') == 'WARNING']),
@@ -697,9 +807,8 @@ def generate_gap_analysis(validation_issues: list, orphan_issues: list,
 # Artifact stub generation
 # ---------------------------------------------------------------------------
 
-def generate_artifact_stubs(traceability: dict, annotations: list[dict],
-                             config: dict, project_root: Path) -> dict:
-    """Generate stub REQ-NNN.md and SPEC-NNN-NNN.md files for annotations
+def generate_artifact_stubs(traceability, annotations, config, project_root):
+    """Generate stub REQ-NNN.md and SPEC-NNN.md files for annotations
     that lack corresponding formal artifact files. Returns summary of actions."""
     gxp_dir = project_root / config['artifacts_dir']
     req_dir = gxp_dir / 'requirements'
@@ -712,10 +821,11 @@ def generate_artifact_stubs(traceability: dict, annotations: list[dict],
     created_specs = []
     skipped = []
 
+    nodes = traceability['nodes']
+    edges = traceability['edges']
+
     # Collect all requirement descriptions from annotations
     req_descs = {}
-    req_risks = {}
-    req_specs_map = defaultdict(set)
     spec_descs = {}
     spec_sources = defaultdict(list)
     spec_tests = defaultdict(list)
@@ -727,20 +837,14 @@ def generate_artifact_stubs(traceability: dict, annotations: list[dict],
         for s in ann['specifications']:
             if s['desc']:
                 spec_descs[s['id']] = s['desc']
-            req_id = _spec_to_req(s['id'])
-            if req_id:
-                req_specs_map[req_id].add(s['id'])
             if ann['is_test']:
                 spec_tests[s['id']].append(ann['file'])
             else:
                 spec_sources[s['id']].append(ann['file'])
-        for risk in ann['risk_levels']:
-            for r in ann['requirements']:
-                req_risks[r['id']] = risk
 
     # Generate requirement stubs
-    for chain in traceability['chains']:
-        req_id = chain['requirement']
+    req_nodes = {nid: n for nid, n in nodes.items() if n['phase'] == 'requirement'}
+    for req_id, req_node in req_nodes.items():
         req_file = req_dir / f'{req_id}.md'
 
         if req_file.exists():
@@ -748,44 +852,55 @@ def generate_artifact_stubs(traceability: dict, annotations: list[dict],
             continue
 
         desc = req_descs.get(req_id, 'No description available from annotations')
-        risk = chain['risk_level']
-        specs = sorted(chain['specifications'])
+        risk = req_node.get('risk', 'UNKNOWN')
+
+        # Find specs that implement this requirement via edges
+        linked_specs = []
+        for edge in edges:
+            if edge['to'] == req_id and edge['type'] == 'satisfies':
+                # Find what satisfies this req
+                for e2 in edges:
+                    if e2['from'] == edge['from'] and e2['type'] == 'implements':
+                        linked_specs.append(e2['to'])
 
         content = (
-            f'---\n'
+            '---\n'
             f'gxp_id: {req_id}\n'
             f'title: "{desc}"\n'
-            f'parent_id: null\n'
             f'description: "{desc}"\n'
             f'risk_level: {risk}\n'
-            f'acceptance_criteria:\n'
-            f'  - "TODO: Define acceptance criteria"\n'
-            f'validation_status: draft\n'
+            'acceptance_criteria:\n'
+            '  - "TODO: Define acceptance criteria"\n'
+            'validation_status: draft\n'
             f'created: "{now}"\n'
             f'updated: "{now}"\n'
-            f'author: "generated-by-gxpmd-harden"\n'
-            f'---\n\n'
+            'author: "generated-by-gxpmd-harden"\n'
+            '---\n\n'
             f'# {req_id}: {desc}\n\n'
-            f'> This stub was auto-generated by `gxpmd-harden.py` from source annotations.\n'
-            f'> Review and flesh out for HIGH risk components.\n\n'
-            f'## Linked Specifications\n\n'
+            '> This stub was auto-generated by `gxpmd-harden.py` from source annotations.\n'
+            '> Review and flesh out for HIGH risk components.\n\n'
         )
-        for sid in specs:
-            content += f'- {sid}\n'
+
+        if linked_specs:
+            content += '## Linked Specifications\n\n'
+            for sid in sorted(set(linked_specs)):
+                content += f'- {sid}\n'
+            content += '\n'
+
         content += (
-            f'\n## Regulatory Basis\n\n'
-            f'TODO: Document the regulatory basis for this requirement.\n\n'
-            f'## Risk Justification\n\n'
+            '## Regulatory Basis\n\n'
+            'TODO: Document the regulatory basis for this requirement.\n\n'
+            '## Risk Justification\n\n'
             f'Classified as **{risk}** risk.\n'
-            f'TODO: Document impact analysis and risk justification.\n'
+            'TODO: Document impact analysis and risk justification.\n'
         )
 
         req_file.write_text(content, encoding='utf-8')
         created_reqs.append(str(req_file.relative_to(project_root)))
 
     # Generate specification stubs
-    all_spec_ids = set(traceability['all_spec_ids'])
-    for spec_id in sorted(all_spec_ids):
+    spec_nodes = {nid: n for nid, n in nodes.items() if n['phase'] == 'specification'}
+    for spec_id, spec_node in spec_nodes.items():
         spec_file = spec_dir / f'{spec_id}.md'
 
         if spec_file.exists():
@@ -793,41 +908,39 @@ def generate_artifact_stubs(traceability: dict, annotations: list[dict],
             continue
 
         desc = spec_descs.get(spec_id, 'No description available from annotations')
-        us_id = _spec_to_us(spec_id)
         sources = sorted(set(spec_sources.get(spec_id, [])))
         tests = sorted(set(spec_tests.get(spec_id, [])))
 
         content = (
-            f'---\n'
+            '---\n'
             f'gxp_id: {spec_id}\n'
             f'title: "{desc}"\n'
-            f'parent_id: {us_id or "null"}\n'
-            f'verification_tier: OQ\n'
-            f'design_approach: "TODO: Describe implementation approach"\n'
-            f'source_files:\n'
+            'verification_tier: OQ\n'
+            'design_approach: "TODO: Describe implementation approach"\n'
+            'source_files:\n'
         )
         for src in sources:
             content += f'  - "{src}"\n'
         if not sources:
-            content += f'  - "TODO: Link source files"\n'
-        content += f'test_files:\n'
+            content += '  - "TODO: Link source files"\n'
+        content += 'test_files:\n'
         for tst in tests:
             content += f'  - "{tst}"\n'
         if not tests:
-            content += f'  - "TODO: Link test files"\n'
+            content += '  - "TODO: Link test files"\n'
         content += (
-            f'validation_status: draft\n'
+            'validation_status: draft\n'
             f'created: "{now}"\n'
             f'updated: "{now}"\n'
-            f'author: "generated-by-gxpmd-harden"\n'
-            f'---\n\n'
+            'author: "generated-by-gxpmd-harden"\n'
+            '---\n\n'
             f'# {spec_id}: {desc}\n\n'
-            f'> This stub was auto-generated by `gxpmd-harden.py` from source annotations.\n'
-            f'> Review and flesh out for HIGH risk components.\n\n'
-            f'## Design Approach\n\n'
-            f'TODO: Document the technical design.\n\n'
-            f'## Data Flow\n\n'
-            f'TODO: Document data flows and security considerations.\n'
+            '> This stub was auto-generated by `gxpmd-harden.py` from source annotations.\n'
+            '> Review and flesh out for HIGH risk components.\n\n'
+            '## Design Approach\n\n'
+            'TODO: Document the technical design.\n\n'
+            '## Data Flow\n\n'
+            'TODO: Document data flows and security considerations.\n'
         )
 
         spec_file.write_text(content, encoding='utf-8')
@@ -840,7 +953,7 @@ def generate_artifact_stubs(traceability: dict, annotations: list[dict],
     }
 
 
-def collect_risk_concerns(annotations: list[dict]) -> list[dict]:
+def collect_risk_concerns(annotations):
     """Collect all @gxp-risk-concern annotations across the codebase."""
     concerns = []
     for ann in annotations:
@@ -859,7 +972,7 @@ def collect_risk_concerns(annotations: list[dict]) -> list[dict]:
 
 def main():
     parser = argparse.ArgumentParser(
-        description='GxP.MD v2.1.0 Compliance Sweep Tool',
+        description='GxP.MD v3.0.0 Compliance Sweep Tool',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='Outputs are written to the .gxp/ directory in the project root.',
     )
@@ -883,7 +996,7 @@ def main():
     gxpmd_path = root / 'GxP.MD'
     if not gxpmd_path.exists():
         print(f'ERROR: No GxP.MD file found at {gxpmd_path}', file=sys.stderr)
-        sys.exit(1)
+        sys.exit(2)
 
     print(f'Reading config from {gxpmd_path}')
     config = parse_frontmatter(gxpmd_path)
@@ -910,11 +1023,11 @@ def main():
     validation_issues = validate_annotations(annotations, config)
 
     # 5. Build traceability
-    print('Building traceability matrix...')
+    print('Building traceability graph...')
     traceability = build_traceability(annotations)
 
     # 6. Find orphans
-    print('Checking for orphan annotations...')
+    print('Checking for orphan nodes...')
     orphan_issues = find_orphans(traceability, annotations)
 
     # 7. Coverage analysis
@@ -967,30 +1080,32 @@ def main():
     status_path.write_text(status_report, encoding='utf-8')
     print(f'  Wrote {status_path}')
 
-    # 9. Summary
+    # 11. Summary
     all_issues = validation_issues + orphan_issues + coverage_issues
     errors = [i for i in all_issues if i.get('severity') == 'ERROR']
     warnings = [i for i in all_issues if i.get('severity') == 'WARNING']
 
-    chains = traceability['chains']
-    complete = sum(1 for c in chains if c['status'] == 'COMPLETE')
+    nodes = traceability['nodes']
+    coverage = traceability['coverage']
+    req_nodes = {nid: n for nid, n in nodes.items() if n['phase'] == 'requirement'}
+    covered = sum(1 for r in req_nodes if coverage.get(r, {}).get('covered'))
 
     print()
     print('=' * 60)
     print('  GxP.MD COMPLIANCE SWEEP COMPLETE')
     print('=' * 60)
-    print(f'  Requirements:     {len(chains)}')
-    print(f'  Complete chains:  {complete}/{len(chains)}')
-    print(f'  Errors:           {len(errors)}')
-    print(f'  Warnings:         {len(warnings)}')
-    print(f'  Annotated files:  {len(annotations)}')
+    print(f'  Requirements:       {len(req_nodes)}')
+    print(f'  Covered:            {covered}/{len(req_nodes)}')
+    print(f'  Errors:             {len(errors)}')
+    print(f'  Warnings:           {len(warnings)}')
+    print(f'  Annotated files:    {len(annotations)}')
     print('=' * 60)
 
     if errors:
         print()
         print('ERRORS:')
         for issue in errors:
-            loc = issue.get('file', issue.get('requirement', '?'))
+            loc = issue.get('file', issue.get('node', issue.get('requirement', '?')))
             print(f'  [{loc}] {issue["message"]}')
 
     if args.json:
@@ -998,8 +1113,8 @@ def main():
             'traceability_matrix': matrix,
             'gap_analysis': gaps,
             'summary': {
-                'total_requirements': len(chains),
-                'complete_chains': complete,
+                'total_requirements': len(req_nodes),
+                'covered_requirements': covered,
                 'errors': len(errors),
                 'warnings': len(warnings),
                 'annotated_files': len(annotations),

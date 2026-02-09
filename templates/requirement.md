@@ -4,15 +4,15 @@
 # Name this file: .gxp/requirements/REQ-{NNN}-short-description.md
 # Example: REQ-001-audit-trail.md, REQ-002-user-authentication.md
 
-# Unique GxP identifier (format: REQ-NNN, zero-padded)
+# Unique GxP identifier (format: REQ-NNN, zero-padded, opaque)
 gxp_id: REQ-001
 
 # Short, descriptive title
 title: "Descriptive Requirement Title"
 
-# Parent requirement ID (null for top-level requirements)
-# Use this to create requirement hierarchies (e.g., REQ-002 is child of REQ-001)
-parent_id: null
+# List of requirements this requirement satisfies (parent/derived-from relationships)
+# Leave empty [] for top-level requirements, or reference other REQ-NNN IDs
+satisfies: []
 
 # Detailed requirement description
 description: |
@@ -144,17 +144,24 @@ This requirement satisfies the following regulatory obligations:
 
 ## Traceability
 
-### Child Requirements
+### Parent/Derived Requirements
 
-- REQ-XXX: [More specific sub-requirement]
-- REQ-XXX: [Another related requirement]
+- REQ-XXX: [Parent requirement if this is a sub-requirement]
+- REQ-XXX: [Related requirement in requirement hierarchy]
 
 ### Related User Stories
 
-*User stories will reference this requirement with `parent_id: REQ-001`*
+*User stories will reference this requirement via edge tags: @gxp-satisfies REQ-001*
 
-- US-001-001: [User story title]
-- US-001-002: [User story title]
+- US-001: [User story title]
+- US-002: [User story title]
+
+### Related Specifications
+
+*Specifications may directly implement this requirement via edge tags: @gxp-satisfies REQ-001*
+
+- SPEC-001: [Spec title]
+- SPEC-002: [Spec title]
 
 ## Acceptance Criteria (Testable)
 

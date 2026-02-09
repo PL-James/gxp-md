@@ -10,7 +10,7 @@
 ```
 
 <p align="center">
-  <a href="https://gxp.md/spec"><img src="https://img.shields.io/badge/spec-v2.1.0-0d9488?style=flat-square" alt="Spec v2.1.0"></a>
+  <a href="https://gxp.md/spec"><img src="https://img.shields.io/badge/spec-v3.0.0-0d9488?style=flat-square" alt="Spec v3.0.0"></a>
   <a href="https://github.com/PL-James/gxp-md/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue?style=flat-square" alt="License"></a>
   <a href="https://github.com/PL-James/gxp-md/issues"><img src="https://img.shields.io/github/issues/PL-James/gxp-md?style=flat-square&color=orange" alt="Issues"></a>
   <a href="https://github.com/sponsors/PL-James"><img src="https://img.shields.io/badge/sponsor-%E2%9D%A4-pink?style=flat-square" alt="Sponsor"></a>
@@ -40,9 +40,10 @@ Drop a `GxP.MD` file in your project root. Your AI agent reads it, understands t
 AI agents are great at writing code. They're terrible at regulatory compliance — unless you tell them exactly what the rules are. GxP.MD is that instruction set: a single file that turns any AI coding agent into a GxP-aware development partner.
 
 ```
-  REQ  -->  US  -->  SPEC  -->  CODE  -->  TEST  -->  EVIDENCE
-   |         |         |          |          |           |
-   +-------- Full V-Model traceability via annotations --+
+  REQ ◀──satisfied by── US ◀──implemented by── SPEC ◀──implemented by── CODE ◀──verified by── TEST
+   ▲                     ▲                      ▲                         │                    │
+   └──satisfied by───────┴──implemented by──────┴─────────────────────────┘──verified by───────┘
+              (many-to-many edges via @gxp-satisfies, @gxp-implements, @gxp-verifies)
 ```
 
 ### Key properties
@@ -53,6 +54,19 @@ AI agents are great at writing code. They're terrible at regulatory compliance �
 - **Agent-agnostic** — works with Claude, GPT, Gemini, Copilot, or any future agent
 - **Two-mode system** — lightweight `develop` mode, formalized `harden` mode per sprint
 - **ALCOA+ compliant** — contemporaneous compliance records, not retroactive audit prep
+- **Graph-based traceability** — many-to-many relationships via explicit edge tags, not ID encoding
+
+### What's New in v3
+
+v3 replaces the hierarchical ID-scheme traceability of v2 with a directed acyclic graph (DAG) model:
+
+- **Edge tags**: `@gxp-satisfies`, `@gxp-implements`, `@gxp-verifies` replace `@gxp-req`, `@gxp-spec`, `@trace`
+- **Opaque IDs**: `REQ-001`, `US-042`, `SPEC-137` — numbers don't encode parentage
+- **Many-to-many**: A source file can satisfy multiple requirements, a test can verify multiple specs
+- **Skipped phases**: LOW-risk paths like SPEC → CODE → TEST are valid shorter paths, not errors
+- **Graph coverage**: Coverage is calculated via reachability analysis, not chain completeness
+
+See [RFC-002](spec/rfc/RFC-002-graph-traceability.md) for the full rationale and migration guide.
 
 ---
 
@@ -101,8 +115,8 @@ gxp-md/
 |   +-- GxP.MD.starter        #   Drop-in GxP.MD file
 |   +-- system-context.md     #   .gxp/system_context.md template
 |   +-- requirement.md        #   .gxp/requirements/REQ-NNN.md
-|   +-- user-story.md         #   .gxp/user_stories/US-NNN-NNN.md
-|   +-- specification.md      #   .gxp/specs/SPEC-NNN-NNN.md
+|   +-- user-story.md         #   .gxp/user_stories/US-NNN.md
+|   +-- specification.md      #   .gxp/specs/SPEC-NNN.md
 |   \-- evidence-manifest.json
 |
 +-- tools/                   # Compliance tooling
@@ -122,12 +136,12 @@ gxp-md/
 
 ## How Annotations Work
 
-Source files declare what they implement:
+Source files declare what they satisfy and implement:
 
 ```typescript
 /**
- * @gxp-req REQ-001 "User authentication"
- * @gxp-spec SPEC-001-001 "OAuth2 PKCE flow"
+ * @gxp-satisfies REQ-001, REQ-003
+ * @gxp-implements SPEC-042
  * @gxp-risk HIGH
  */
 export async function authenticate(creds: Credentials) { /* ... */ }
@@ -137,15 +151,14 @@ Test files declare what they verify:
 
 ```typescript
 /**
- * @gxp-spec SPEC-001-001
- * @trace US-001-001
+ * @gxp-verifies SPEC-042
  * @test-type OQ
  * @gxp-risk HIGH
  */
 describe("OAuth2 PKCE login", () => { /* ... */ });
 ```
 
-Together they form the complete V-Model chain — no separate documentation system needed.
+Together they form the complete traceability graph — no separate documentation system needed.
 
 ## Harden Tool
 
@@ -166,11 +179,11 @@ $ python tools/gxpmd-harden.py --root /path/to/project
 ```
 
 **Outputs:**
-- `.gxp/traceability-matrix.json` — full REQ > US > SPEC > CODE > TEST chain
+- `.gxp/traceability-matrix.json` — traceability graph (DAG)
 - `.gxp/compliance-status.md` — human-readable compliance report with sign-off section
 - `.gxp/gap-analysis.json` — all validation errors, orphans, and coverage shortfalls
 - `.gxp/requirements/REQ-NNN.md` — auto-generated stubs from annotations (draft)
-- `.gxp/specs/SPEC-NNN-NNN.md` — auto-generated stubs from annotations (draft)
+- `.gxp/specs/SPEC-NNN.md` — auto-generated stubs from annotations (draft)
 
 ---
 
